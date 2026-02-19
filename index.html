@@ -3,48 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financeiro Pro</title>
+    <title>Financeiro Pro - Casal</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 font-sans">
 
-    <div class="flex h-screen">
-        <div class="w-1/3 bg-white border-r overflow-y-auto p-4">
+    <div class="flex flex-col md:flex-row h-screen">
+        <div class="w-full md:w-1/3 bg-white border-r overflow-y-auto p-4 flex flex-col">
             <h2 class="font-bold text-lg mb-4 border-b pb-2">🏦 Bancos/Contas</h2>
             <div id="listaBancos" class="space-y-2 mb-8"></div>
 
             <h2 class="font-bold text-lg mb-4 border-b pb-2">💳 Cartões</h2>
-            <div id="listaCartoes" class="space-y-2"></div>
+            <div id="listaCartoes" class="space-y-2 flex-grow"></div>
             
             <div class="mt-8 pt-4 border-t space-y-2">
-                <button onclick="abrirModal('banco')" class="w-full text-xs bg-blue-100 text-blue-700 p-2 rounded">+ Novo Banco</button>
-                <button onclick="abrirModal('cartao')" class="w-full text-xs bg-purple-100 text-purple-700 p-2 rounded">+ Novo Cartão</button>
-                <button onclick="abrirModal('transacao')" class="w-full bg-green-600 text-white p-2 rounded font-bold">+ Lançar Gasto</button>
+                <button onclick="abrirModal('banco')" class="w-full text-xs bg-blue-100 text-blue-700 p-2 rounded hover:bg-blue-200">+ Novo Banco</button>
+                <button onclick="abrirModal('cartao')" class="w-full text-xs bg-purple-100 text-purple-700 p-2 rounded hover:bg-purple-200">+ Novo Cartão</button>
+                <button onclick="abrirModal('transacao')" class="w-full bg-green-600 text-white p-2 rounded font-bold hover:bg-green-700">+ Lançar Gasto</button>
             </div>
         </div>
 
-        <div class="w-2/3 p-6 overflow-y-auto">
+        <div class="w-full md:w-2/3 p-6 overflow-y-auto bg-gray-50">
             <div id="detalheTitulo" class="mb-6">
-                <h1 class="text-2xl font-bold text-gray-800">Selecione um banco ou cartão</h1>
-                <p class="text-gray-500">Clique na lista ao lado para ver os detalhes</p>
+                <h1 class="text-2xl font-bold text-gray-800">Selecione uma conta</h1>
+                <p class="text-gray-500">Clique na lista ao lado para ver o extrato.</p>
             </div>
             <div id="listaMovimentacoes" class="space-y-2"></div>
         </div>
     </div>
 
-    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-lg w-full max-w-md">
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-lg w-full max-w-md shadow-2xl">
             <h2 id="modalTitulo" class="text-xl font-bold mb-4"></h2>
-            <div id="modalCorpo"></div>
-            <div class="flex justify-end gap-2 mt-4">
-                <button onclick="fecharModal()" class="px-4 py-2 text-gray-500">Cancelar</button>
-                <button id="btnConfirmar" class="px-4 py-2 bg-blue-600 text-white rounded">Salvar</button>
+            <div id="modalCorpo" class="space-y-4"></div>
+            <div class="flex justify-end gap-2 mt-6">
+                <button onclick="fecharModal()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded">Cancelar</button>
+                <button id="btnConfirmar" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Confirmar e Salvar</button>
             </div>
         </div>
     </div>
 
     <script>
+        // --- SUAS CHAVES AQUI ---
         const SUPABASE_URL = 'COLE_AQUI_SUA_URL';
         const SUPABASE_KEY = 'COLE_AQUI_SUA_CHAVE_ANON';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -53,7 +54,7 @@
         let cartoes = [];
 
         async function carregarDados() {
-            const { data: b } = await _supabase.from('bancos').select('*');
+            const { data: b } = await _supabase.from('bancos').select('*').order('nome');
             const { data: c } = await _supabase.from('cartoes').select('*, bancos(nome)');
             const { data: t } = await _supabase.from('transacoes').select('*');
 
@@ -69,9 +70,9 @@
                 const gastosNoBanco = transacoes.filter(t => t.banco_id === b.id).reduce((acc, curr) => acc + parseFloat(curr.valor), 0);
                 const saldoAtual = b.saldo_inicial - gastosNoBanco;
                 return `
-                    <div onclick="verDetalhesBanco('${b.id}')" class="p-3 bg-gray-50 rounded cursor-pointer hover:bg-blue-50 border border-transparent hover:border-blue-200">
+                    <div onclick="verDetalhesBanco('${b.id}')" class="p-3 bg-gray-50 rounded cursor-pointer hover:bg-blue-50 border border-transparent hover:border-blue-200 transition shadow-sm">
                         <div class="font-bold text-sm text-gray-700">${b.nome}</div>
-                        <div class="text-xs ${saldoAtual < 0 ? 'text-red-500' : 'text-green-600'}">Saldo: R$ ${saldoAtual.toFixed(2)}</div>
+                        <div class="text-xs ${saldoAtual < 0 ? 'text-red-500' : 'text-green-600'} font-medium">Saldo: R$ ${saldoAtual.toFixed(2)}</div>
                     </div>
                 `;
             }).join('');
@@ -80,10 +81,10 @@
             lc.innerHTML = cartoes.map(c => {
                 const totalCartao = transacoes.filter(t => t.cartao_id === c.id).reduce((acc, curr) => acc + parseFloat(curr.valor), 0);
                 return `
-                    <div onclick="verDetalhesCartao('${c.id}')" class="p-3 bg-gray-50 rounded cursor-pointer hover:bg-purple-50 border border-transparent hover:border-purple-200">
+                    <div onclick="verDetalhesCartao('${c.id}')" class="p-3 bg-gray-50 rounded cursor-pointer hover:bg-purple-50 border border-transparent hover:border-purple-200 transition shadow-sm">
                         <div class="font-bold text-sm text-gray-700">${c.nome}</div>
-                        <div class="text-xs text-purple-600 italic">via ${c.bancos?.nome || 'S/B'}</div>
-                        <div class="text-xs font-semibold">Gasto: R$ ${totalCartao.toFixed(2)}</div>
+                        <div class="text-[10px] text-gray-400 uppercase tracking-tighter">Vinculado a: ${c.bancos?.nome || 'Não definido'}</div>
+                        <div class="text-xs font-semibold text-purple-700">Fatura: R$ ${totalCartao.toFixed(2)}</div>
                     </div>
                 `;
             }).join('');
@@ -92,65 +93,81 @@
         async function verDetalhesBanco(id) {
             const banco = bancos.find(b => b.id === id);
             const { data: t } = await _supabase.from('transacoes').select('*').eq('banco_id', id).order('data_transacao', {ascending: false});
-            
-            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-2xl font-bold">${banco.nome}</h1><p>Movimentações gerais (Débitos e faturas de cartões vinculados)</p>`;
+            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-2xl font-bold text-blue-800">${banco.nome}</h1><p class="text-sm text-gray-500 font-medium">Lançamentos diretos e faturas de cartões.</p>`;
             renderizarTransacoes(t);
         }
 
         async function verDetalhesCartao(id) {
             const cartao = cartoes.find(c => c.id === id);
             const { data: t } = await _supabase.from('transacoes').select('*').eq('cartao_id', id).order('data_transacao', {ascending: false});
-            
-            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-2xl font-bold">Cartão: ${cartao.nome}</h1><p>Discriminação de lançamentos neste cartão</p>`;
+            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-2xl font-bold text-purple-800">${cartao.nome}</h1><p class="text-sm text-gray-500 font-medium">Lista de compras feitas neste cartão.</p>`;
             renderizarTransacoes(t);
         }
 
         function renderizarTransacoes(lista) {
             const container = document.getElementById('listaMovimentacoes');
+            if (lista.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 italic">Nenhum lançamento encontrado.</p>';
+                return;
+            }
             container.innerHTML = lista.map(t => `
-                <div class="flex justify-between p-3 bg-white shadow-sm rounded border-l-4 border-blue-500 text-sm">
-                    <span><strong>${t.descricao}</strong> ${t.total_parcelas > 1 ? `(${t.parcela_atual}/${t.total_parcelas})` : ''}<br><small class="text-gray-400">${t.data_transacao}</small></span>
-                    <span class="font-bold text-red-600">R$ ${parseFloat(t.valor).toFixed(2)}</span>
+                <div class="flex justify-between items-center p-3 bg-white shadow-sm rounded border-l-4 ${t.cartao_id ? 'border-purple-500' : 'border-blue-500'}">
+                    <div>
+                        <div class="font-bold text-gray-800">${t.descricao} ${t.total_parcelas > 1 ? `<span class="text-blue-500 text-xs">[${t.parcela_atual}/${t.total_parcelas}]</span>` : ''}</div>
+                        <div class="text-[11px] text-gray-400">${t.data_transacao}</div>
+                    </div>
+                    <span class="font-bold text-red-500">R$ ${parseFloat(t.valor).toFixed(2)}</span>
                 </div>
             `).join('');
         }
 
-        // LÓGICA DE MODAIS PARA CRIAÇÃO
         function abrirModal(tipo) {
             const modal = document.getElementById('modal');
             const corpo = document.getElementById('modalCorpo');
             const btn = document.getElementById('btnConfirmar');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
+            modal.classList.replace('hidden', 'flex');
 
             if(tipo === 'banco') {
-                document.getElementById('modalTitulo').innerText = "Novo Banco";
-                corpo.innerHTML = `<input id="n_nome" placeholder="Nome do Banco" class="w-full border p-2 mb-2"><input id="n_saldo" type="number" placeholder="Saldo Inicial" class="w-full border p-2">`;
-                btn.onclick = async () => {
-                    await _supabase.from('bancos').insert({ nome: document.getElementById('n_nome').value, saldo_inicial: document.getElementById('n_saldo').value });
-                    fecharModal(); carregarDados();
-                };
-            } else if(tipo === 'cartao') {
-                document.getElementById('modalTitulo').innerText = "Novo Cartão";
-                const options = bancos.map(b => `<option value="${b.id}">${b.nome}</option>`).join('');
-                corpo.innerHTML = `<input id="n_nome" placeholder="Nome do Cartão" class="w-full border p-2 mb-2"><select id="n_banco" class="w-full border p-2">${options}</select>`;
-                btn.onclick = async () => {
-                    await _supabase.from('cartoes').insert({ nome: document.getElementById('n_nome').value, banco_id: document.getElementById('n_banco').value });
-                    fecharModal(); carregarDados();
-                };
-            } else if(tipo === 'transacao') {
-                document.getElementById('modalTitulo').innerText = "Lançar Despesa";
-                const optCartao = `<option value="">Débito Direto (Sem Cartão)</option>` + cartoes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
-                const optBanco = bancos.map(b => `<option value="${b.id}">${b.nome}</option>`).join('');
+                document.getElementById('modalTitulo').innerText = "🏦 Criar Novo Banco";
                 corpo.innerHTML = `
-                    <input id="t_desc" placeholder="Descrição" class="w-full border p-2 mb-2">
-                    <input id="t_val" type="number" placeholder="Valor Total" class="w-full border p-2 mb-2">
-                    <input id="t_data" type="date" value="${new Date().toISOString().split('T')[0]}" class="w-full border p-2 mb-2">
-                    <label class="text-xs">Cartão (Opcional):</label>
-                    <select id="t_cartao" class="w-full border p-2 mb-2">${optCartao}</select>
-                    <label class="text-xs">Banco:</label>
-                    <select id="t_banco" class="w-full border p-2 mb-2">${optBanco}</select>
-                    <input id="t_parc" type="number" value="1" placeholder="Parcelas" class="w-full border p-2">
+                    <input id="n_nome" placeholder="Nome do Banco (ex: Inter)" class="w-full border p-3 rounded">
+                    <input id="n_saldo" type="number" step="0.01" placeholder="Saldo Inicial (R$)" class="w-full border p-3 rounded">`;
+                btn.onclick = async () => {
+                    const nome = document.getElementById('n_nome').value;
+                    const saldo = document.getElementById('n_saldo').value || 0;
+                    if(!nome) return alert("Digite o nome!");
+                    await _supabase.from('bancos').insert({ nome, saldo_inicial: saldo });
+                    fecharModal(); carregarDados();
+                };
+            } 
+            else if(tipo === 'cartao') {
+                document.getElementById('modalTitulo').innerText = "💳 Criar Novo Cartão";
+                if(bancos.length === 0) return alert("Crie um banco primeiro!");
+                const options = bancos.map(b => `<option value="${b.id}">${b.nome}</option>`).join('');
+                corpo.innerHTML = `
+                    <input id="n_nome" placeholder="Nome do Cartão (ex: Nubank)" class="w-full border p-3 rounded">
+                    <label class="text-xs font-bold text-gray-500">VINCULAR AO BANCO:</label>
+                    <select id="n_banco" class="w-full border p-3 rounded">${options}</select>`;
+                btn.onclick = async () => {
+                    const nome = document.getElementById('n_nome').value;
+                    const banco_id = document.getElementById('n_banco').value;
+                    if(!nome) return alert("Digite o nome!");
+                    await _supabase.from('cartoes').insert({ nome, banco_id });
+                    fecharModal(); carregarDados();
+                };
+            } 
+            else if(tipo === 'transacao') {
+                document.getElementById('modalTitulo').innerText = "💸 Lançar Despesa";
+                if(bancos.length === 0) return alert("Crie um banco primeiro!");
+                const optCartao = `<option value="">💳 Escolha o Cartão (Opcional)</option>` + cartoes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+                const optBanco = `<option value="">🏦 Escolha o Banco (Obrigatório)</option>` + bancos.map(b => `<option value="${b.id}">${b.nome}</option>`).join('');
+                corpo.innerHTML = `
+                    <input id="t_desc" placeholder="O que você comprou?" class="w-full border p-3 rounded">
+                    <input id="t_val" type="number" step="0.01" placeholder="Valor Total R$" class="w-full border p-3 rounded">
+                    <input id="t_data" type="date" value="${new Date().toISOString().split('T')[0]}" class="w-full border p-3 rounded">
+                    <select id="t_cartao" class="w-full border p-3 rounded bg-purple-50">${optCartao}</select>
+                    <select id="t_banco" class="w-full border p-3 rounded bg-blue-50">${optBanco}</select>
+                    <input id="t_parc" type="number" min="1" value="1" placeholder="Número de Parcelas" class="w-full border p-3 rounded">
                 `;
                 btn.onclick = salvarTransacao;
             }
@@ -162,21 +179,32 @@
             const dataB = document.getElementById('t_data').value;
             const cartId = document.getElementById('t_cartao').value || null;
             const bancId = document.getElementById('t_banco').value;
-            const parc = parseInt(document.getElementById('t_parc').value);
+            const parc = parseInt(document.getElementById('t_parc').value) || 1;
+
+            if(!desc || !val || !bancId) return alert("Preencha Descrição, Valor e Banco!");
 
             const ins = [];
             for(let i=0; i<parc; i++) {
-                let d = new Date(dataB + 'T12:00:00'); d.setMonth(d.setMonth() + i);
+                let d = new Date(dataB + 'T12:00:00');
+                d.setMonth(d.getMonth() + i);
                 ins.push({
-                    descricao: desc, valor: val/parc, data_transacao: d.toISOString().split('T')[0],
-                    banco_id: bancId, cartao_id: cartId, parcela_atual: i+1, total_parcelas: parc
+                    descricao: desc, 
+                    valor: val/parc, 
+                    data_transacao: d.toISOString().split('T')[0],
+                    banco_id: bancId, 
+                    cartao_id: cartId, 
+                    parcela_atual: i+1, 
+                    total_parcelas: parc
                 });
             }
-            await _supabase.from('transacoes').insert(ins);
+            const { error } = await _supabase.from('transacoes').insert(ins);
+            if(error) alert("Erro ao salvar: " + error.message);
             fecharModal(); carregarDados();
         }
 
-        function fecharModal() { document.getElementById('modal').classList.add('hidden'); document.getElementById('modal').classList.remove('flex'); }
+        function fecharModal() {
+            document.getElementById('modal').classList.replace('flex', 'hidden');
+        }
 
         carregarDados();
     </script>
