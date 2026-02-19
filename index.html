@@ -3,98 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finanças do Casal</title>
+    <title>Financeiro Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 p-4">
+<body class="bg-gray-100 font-sans">
 
-    <div class="max-w-md mx-auto bg-white p-6 rounded-xl shadow-lg mt-10">
-        <h1 class="text-2xl font-bold text-center mb-6">💰 Lançamento Financeiro</h1>
+    <div class="flex h-screen">
+        <div class="w-1/3 bg-white border-r overflow-y-auto p-4">
+            <h2 class="font-bold text-lg mb-4 border-b pb-2">🏦 Bancos/Contas</h2>
+            <div id="listaBancos" class="space-y-2 mb-8"></div>
 
-        <form id="financeForm" class="space-y-4">
-            <input type="text" id="descricao" placeholder="Descrição (Ex: Mercado)" required class="w-full border p-2 rounded">
+            <h2 class="font-bold text-lg mb-4 border-b pb-2">💳 Cartões</h2>
+            <div id="listaCartoes" class="space-y-2"></div>
             
-            <div class="flex gap-2">
-                <input type="number" step="0.01" id="valor" placeholder="Valor R$" required class="w-full border p-2 rounded">
-                <input type="date" id="data" required class="border p-2 rounded text-sm">
+            <div class="mt-8 pt-4 border-t space-y-2">
+                <button onclick="abrirModal('banco')" class="w-full text-xs bg-blue-100 text-blue-700 p-2 rounded">+ Novo Banco</button>
+                <button onclick="abrirModal('cartao')" class="w-full text-xs bg-purple-100 text-purple-700 p-2 rounded">+ Novo Cartão</button>
+                <button onclick="abrirModal('transacao')" class="w-full bg-green-600 text-white p-2 rounded font-bold">+ Lançar Gasto</button>
             </div>
+        </div>
 
-            <div class="flex gap-2">
-                <select id="conta" class="w-full border p-2 rounded bg-white text-sm">
-                    <option value="Carteira">Carteira (Dinheiro)</option>
-                    <option value="Nubank">Nubank</option>
-                    <option value="Inter">Inter</option>
-                    <option value="Cartão">Cartão de Crédito</option>
-                </select>
-                <input type="number" id="parcelas" value="1" min="1" placeholder="Parc." class="w-20 border p-2 rounded">
+        <div class="w-2/3 p-6 overflow-y-auto">
+            <div id="detalheTitulo" class="mb-6">
+                <h1 class="text-2xl font-bold text-gray-800">Selecione um banco ou cartão</h1>
+                <p class="text-gray-500">Clique na lista ao lado para ver os detalhes</p>
             </div>
+            <div id="listaMovimentacoes" class="space-y-2"></div>
+        </div>
+    </div>
 
-            <button type="submit" id="btnSalvar" class="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700">
-                Lançar Despesa
-            </button>
-        </form>
-
-        <div id="lista" class="mt-8 space-y-2">
-            <p class="text-center text-gray-400">Carregando últimos gastos...</p>
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-lg w-full max-w-md">
+            <h2 id="modalTitulo" class="text-xl font-bold mb-4"></h2>
+            <div id="modalCorpo"></div>
+            <div class="flex justify-end gap-2 mt-4">
+                <button onclick="fecharModal()" class="px-4 py-2 text-gray-500">Cancelar</button>
+                <button id="btnConfirmar" class="px-4 py-2 bg-blue-600 text-white rounded">Salvar</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // --- TROQUE ESTES DADOS PELOS DO SEU SUPABASE ---
-        const SUPABASE_URL = 'https://isqwlkrkjbczamuasgix.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzcXdsa3JramJjemFtdWFzZ2l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjcyNzAsImV4cCI6MjA4NzAwMzI3MH0.g_aFpoVS4sRwpkBcZZ-31AlW6ZfPK7l_7-YfwRI7g6g';
+        const SUPABASE_URL = 'COLE_AQUI_SUA_URL';
+        const SUPABASE_KEY = 'COLE_AQUI_SUA_CHAVE_ANON';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const form = document.getElementById('financeForm');
+        let bancos = [];
+        let cartoes = [];
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            document.getElementById('btnSalvar').innerText = 'Salvando...';
-            
-            const desc = document.getElementById('descricao').value;
-            const valorTotal = parseFloat(document.getElementById('valor').value);
-            const dataBase = document.getElementById('data').value;
-            const conta = document.getElementById('conta').value;
-            const numParcelas = parseInt(document.getElementById('parcelas').value);
+        async function carregarDados() {
+            const { data: b } = await _supabase.from('bancos').select('*');
+            const { data: c } = await _supabase.from('cartoes').select('*, bancos(nome)');
+            const { data: t } = await _supabase.from('transacoes').select('*');
 
-            const lancamentos = [];
-            for (let i = 0; i < numParcelas; i++) {
-                let d = new Date(dataBase + 'T12:00:00'); // Ajuste para evitar fuso horário
-                d.setMonth(d.getMonth() + i);
-                lancamentos.push({
-                    descricao: numParcelas > 1 ? `${desc} (${i+1}/${numParcelas})` : desc,
-                    valor: valorTotal / numParcelas,
-                    data_transacao: d.toISOString().split('T')[0],
-                    conta_id: conta
-                });
-            }
+            bancos = b || [];
+            cartoes = c || [];
 
-            const { error } = await _supabase.from('transacoes').insert(lancamentos);
-            if (error) alert("Erro: " + error.message);
-            else {
-                form.reset();
-                document.getElementById('data').value = new Date().toISOString().split('T')[0];
-                carregar();
-            }
-            document.getElementById('btnSalvar').innerText = 'Lançar Despesa';
-        });
+            renderizarListas(t || []);
+        }
 
-        async function carregar() {
-            const { data } = await _supabase.from('transacoes').select('*').order('data_transacao', { ascending: false }).limit(10);
-            const lista = document.getElementById('lista');
-            if (data) {
-                lista.innerHTML = data.map(t => `
-                    <div class="flex justify-between border-b p-2 text-sm bg-gray-50 rounded mb-1">
-                        <span><strong>${t.descricao}</strong><br><small class="text-gray-400">${t.data_transacao} - ${t.conta_id}</small></span>
-                        <span class="font-bold">R$ ${parseFloat(t.valor).toFixed(2)}</span>
+        function renderizarListas(transacoes) {
+            const lb = document.getElementById('listaBancos');
+            lb.innerHTML = bancos.map(b => {
+                const gastosNoBanco = transacoes.filter(t => t.banco_id === b.id).reduce((acc, curr) => acc + parseFloat(curr.valor), 0);
+                const saldoAtual = b.saldo_inicial - gastosNoBanco;
+                return `
+                    <div onclick="verDetalhesBanco('${b.id}')" class="p-3 bg-gray-50 rounded cursor-pointer hover:bg-blue-50 border border-transparent hover:border-blue-200">
+                        <div class="font-bold text-sm text-gray-700">${b.nome}</div>
+                        <div class="text-xs ${saldoAtual < 0 ? 'text-red-500' : 'text-green-600'}">Saldo: R$ ${saldoAtual.toFixed(2)}</div>
                     </div>
-                `).join('');
+                `;
+            }).join('');
+
+            const lc = document.getElementById('listaCartoes');
+            lc.innerHTML = cartoes.map(c => {
+                const totalCartao = transacoes.filter(t => t.cartao_id === c.id).reduce((acc, curr) => acc + parseFloat(curr.valor), 0);
+                return `
+                    <div onclick="verDetalhesCartao('${c.id}')" class="p-3 bg-gray-50 rounded cursor-pointer hover:bg-purple-50 border border-transparent hover:border-purple-200">
+                        <div class="font-bold text-sm text-gray-700">${c.nome}</div>
+                        <div class="text-xs text-purple-600 italic">via ${c.bancos?.nome || 'S/B'}</div>
+                        <div class="text-xs font-semibold">Gasto: R$ ${totalCartao.toFixed(2)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function verDetalhesBanco(id) {
+            const banco = bancos.find(b => b.id === id);
+            const { data: t } = await _supabase.from('transacoes').select('*').eq('banco_id', id).order('data_transacao', {ascending: false});
+            
+            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-2xl font-bold">${banco.nome}</h1><p>Movimentações gerais (Débitos e faturas de cartões vinculados)</p>`;
+            renderizarTransacoes(t);
+        }
+
+        async function verDetalhesCartao(id) {
+            const cartao = cartoes.find(c => c.id === id);
+            const { data: t } = await _supabase.from('transacoes').select('*').eq('cartao_id', id).order('data_transacao', {ascending: false});
+            
+            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-2xl font-bold">Cartão: ${cartao.nome}</h1><p>Discriminação de lançamentos neste cartão</p>`;
+            renderizarTransacoes(t);
+        }
+
+        function renderizarTransacoes(lista) {
+            const container = document.getElementById('listaMovimentacoes');
+            container.innerHTML = lista.map(t => `
+                <div class="flex justify-between p-3 bg-white shadow-sm rounded border-l-4 border-blue-500 text-sm">
+                    <span><strong>${t.descricao}</strong> ${t.total_parcelas > 1 ? `(${t.parcela_atual}/${t.total_parcelas})` : ''}<br><small class="text-gray-400">${t.data_transacao}</small></span>
+                    <span class="font-bold text-red-600">R$ ${parseFloat(t.valor).toFixed(2)}</span>
+                </div>
+            `).join('');
+        }
+
+        // LÓGICA DE MODAIS PARA CRIAÇÃO
+        function abrirModal(tipo) {
+            const modal = document.getElementById('modal');
+            const corpo = document.getElementById('modalCorpo');
+            const btn = document.getElementById('btnConfirmar');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            if(tipo === 'banco') {
+                document.getElementById('modalTitulo').innerText = "Novo Banco";
+                corpo.innerHTML = `<input id="n_nome" placeholder="Nome do Banco" class="w-full border p-2 mb-2"><input id="n_saldo" type="number" placeholder="Saldo Inicial" class="w-full border p-2">`;
+                btn.onclick = async () => {
+                    await _supabase.from('bancos').insert({ nome: document.getElementById('n_nome').value, saldo_inicial: document.getElementById('n_saldo').value });
+                    fecharModal(); carregarDados();
+                };
+            } else if(tipo === 'cartao') {
+                document.getElementById('modalTitulo').innerText = "Novo Cartão";
+                const options = bancos.map(b => `<option value="${b.id}">${b.nome}</option>`).join('');
+                corpo.innerHTML = `<input id="n_nome" placeholder="Nome do Cartão" class="w-full border p-2 mb-2"><select id="n_banco" class="w-full border p-2">${options}</select>`;
+                btn.onclick = async () => {
+                    await _supabase.from('cartoes').insert({ nome: document.getElementById('n_nome').value, banco_id: document.getElementById('n_banco').value });
+                    fecharModal(); carregarDados();
+                };
+            } else if(tipo === 'transacao') {
+                document.getElementById('modalTitulo').innerText = "Lançar Despesa";
+                const optCartao = `<option value="">Débito Direto (Sem Cartão)</option>` + cartoes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+                const optBanco = bancos.map(b => `<option value="${b.id}">${b.nome}</option>`).join('');
+                corpo.innerHTML = `
+                    <input id="t_desc" placeholder="Descrição" class="w-full border p-2 mb-2">
+                    <input id="t_val" type="number" placeholder="Valor Total" class="w-full border p-2 mb-2">
+                    <input id="t_data" type="date" value="${new Date().toISOString().split('T')[0]}" class="w-full border p-2 mb-2">
+                    <label class="text-xs">Cartão (Opcional):</label>
+                    <select id="t_cartao" class="w-full border p-2 mb-2">${optCartao}</select>
+                    <label class="text-xs">Banco:</label>
+                    <select id="t_banco" class="w-full border p-2 mb-2">${optBanco}</select>
+                    <input id="t_parc" type="number" value="1" placeholder="Parcelas" class="w-full border p-2">
+                `;
+                btn.onclick = salvarTransacao;
             }
         }
 
-        document.getElementById('data').value = new Date().toISOString().split('T')[0];
-        carregar();
+        async function salvarTransacao() {
+            const desc = document.getElementById('t_desc').value;
+            const val = parseFloat(document.getElementById('t_val').value);
+            const dataB = document.getElementById('t_data').value;
+            const cartId = document.getElementById('t_cartao').value || null;
+            const bancId = document.getElementById('t_banco').value;
+            const parc = parseInt(document.getElementById('t_parc').value);
+
+            const ins = [];
+            for(let i=0; i<parc; i++) {
+                let d = new Date(dataB + 'T12:00:00'); d.setMonth(d.setMonth() + i);
+                ins.push({
+                    descricao: desc, valor: val/parc, data_transacao: d.toISOString().split('T')[0],
+                    banco_id: bancId, cartao_id: cartId, parcela_atual: i+1, total_parcelas: parc
+                });
+            }
+            await _supabase.from('transacoes').insert(ins);
+            fecharModal(); carregarDados();
+        }
+
+        function fecharModal() { document.getElementById('modal').classList.add('hidden'); document.getElementById('modal').classList.remove('flex'); }
+
+        carregarDados();
     </script>
 </body>
 </html>
