@@ -9,6 +9,7 @@
     <style>
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .focus-ring { transition: all 0.3s ease; }
     </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 text-sm md:text-base">
@@ -59,7 +60,7 @@
             <div id="detalheTituloContainer" class="mb-4 flex flex-col md:flex-row md:items-end justify-between gap-4 border-t pt-6">
                 <div id="detalheTitulo">
                     <h1 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">Extrato Detalhado</h1>
-                    <p class="text-slate-500 font-medium text-sm">Selecione uma conta para ver os itens abaixo.</p>
+                    <p class="text-slate-500 font-medium text-sm">Selecione uma conta para ver os detalhes.</p>
                 </div>
                 <button onclick="alternarFiltroParcelas()" id="btnFiltroParcelas" class="flex items-center gap-2 px-4 py-2 rounded-full border-2 border-slate-200 text-[10px] font-black uppercase transition-all hover:bg-slate-100">
                     <span id="indicadorFiltro" class="w-2 h-2 rounded-full bg-slate-300"></span>
@@ -75,7 +76,7 @@
         <div class="bg-white p-6 rounded-3xl w-full max-w-md shadow-2xl transition-all">
             <div class="flex justify-between items-start mb-6">
                 <h2 id="modalTitulo" class="text-xl font-black text-slate-800"></h2>
-                <button id="btnExcluirItem" class="hidden text-red-500 hover:bg-red-50 p-2 rounded-lg text-xs font-bold uppercase">🗑️</button>
+                <button id="btnExcluirItem" class="hidden text-red-500 hover:bg-red-50 p-2 rounded-lg text-xs font-bold uppercase">🗑️ Excluir</button>
             </div>
             <div id="modalCorpo" class="space-y-4"></div>
             <div class="flex justify-end gap-3 mt-10">
@@ -126,7 +127,6 @@
                 const dataT = new Date(t.data_transacao + 'T15:00:00');
                 let mesRef = `${dataT.getFullYear()}-${String(dataT.getMonth() + 1).padStart(2, '0')}`;
 
-                // Se for cartão, aplicar regra do vencimento para o resumo global também
                 if (t.cartao_id) {
                     const cartao = cartoes.find(c => c.id === t.cartao_id);
                     if (cartao && dataT.getDate() >= (cartao.dia_vencimento || 10)) {
@@ -150,7 +150,6 @@
 
         function renderizarListas() {
             const filtroRaw = document.getElementById('filtroMesAno').value;
-            // Render Bancos
             document.getElementById('listaBancos').innerHTML = bancos.map(b => {
                 const total = transacoes.filter(t => {
                     const dT = new Date(t.data_transacao + 'T15:00:00');
@@ -160,13 +159,12 @@
                     <div class="group relative p-4 bg-white rounded-2xl cursor-pointer border-2 ${idSelecionado === b.id ? 'border-blue-500 bg-blue-50' : 'border-transparent shadow-sm'}">
                         <div onclick="verDetalhesBanco('${b.id}')">
                             <div class="font-bold text-slate-700">${b.nome}</div>
-                            <div class="text-[10px] font-black text-blue-600">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                            <div class="text-[10px] font-black text-blue-600 uppercase">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                         </div>
-                        <button onclick="abrirModal('editar_banco', '${b.id}')" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-slate-100 text-[9px] p-1 rounded">Edit</button>
+                        <button onclick="abrirModal('editar_banco', '${b.id}')" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-slate-100 text-[9px] p-1 rounded font-bold">EDIT</button>
                     </div>`;
             }).join('');
 
-            // Render Cartões
             document.getElementById('listaCartoes').innerHTML = cartoes.map(c => {
                 const total = transacoes.filter(t => {
                     if (t.cartao_id !== c.id) return false;
@@ -179,9 +177,9 @@
                     <div class="group relative p-4 bg-white rounded-2xl cursor-pointer border-2 ${idSelecionado === c.id ? 'border-purple-500 bg-purple-50' : 'border-transparent shadow-sm'}">
                         <div onclick="verDetalhesCartao('${c.id}')">
                             <div class="font-bold text-slate-700">${c.nome}</div>
-                            <div class="text-[10px] text-purple-600 font-bold uppercase italic">Fatura: R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                            <div class="text-[10px] text-purple-600 font-bold uppercase italic tracking-tighter">Fatura: R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                         </div>
-                        <button onclick="abrirModal('editar_cartao', '${c.id}')" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-slate-100 text-[9px] p-1 rounded">Edit</button>
+                        <button onclick="abrirModal('editar_cartao', '${c.id}')" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-slate-100 text-[9px] p-1 rounded font-bold">EDIT</button>
                     </div>`;
             }).join('');
         }
@@ -195,7 +193,7 @@
                 return t.banco_id === id && `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === filtroRaw;
             });
             if(filtroSomenteParcelados) filtrados = filtrados.filter(t => t.total_parcelas > 1);
-            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-2xl font-black">${banco.nome}</h1><p class="text-[10px] font-bold text-blue-500 uppercase">Lançamentos em ${filtroRaw}</p>`;
+            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-2xl font-black">${banco.nome}</h1><p class="text-[10px] font-bold text-blue-500 uppercase">Resumo Mês ${filtroRaw}</p>`;
             renderizarTransacoes(filtrados);
         }
 
@@ -211,7 +209,7 @@
                 return `${a}-${String(m + 1).padStart(2, '0')}` === filtroRaw;
             });
             if(filtroSomenteParcelados) filtrados = filtrados.filter(t => t.total_parcelas > 1);
-            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-2xl font-black">${cartao.nome}</h1><p class="text-[10px] font-bold text-purple-500 uppercase">Itens da Fatura • ${filtroRaw}</p>`;
+            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-2xl font-black">${cartao.nome}</h1><p class="text-[10px] font-bold text-purple-500 uppercase">Fatura ${filtroRaw}</p>`;
             renderizarTransacoes(filtrados);
         }
 
@@ -221,13 +219,13 @@
                 <div class="group flex justify-between items-center p-4 bg-white shadow-sm rounded-2xl border-l-8 ${t.cartao_id ? 'border-purple-500' : 'border-blue-500'}">
                     <div onclick="abrirModal('editar_transacao', '${t.id}')" class="flex-grow cursor-pointer">
                         <div class="font-bold text-slate-700">${t.descricao} ${t.total_parcelas > 1 ? `<span class="text-orange-500 text-[10px] ml-1 font-black">[${t.parcela_atual}/${t.total_parcelas}]</span>` : ''}</div>
-                        <div class="text-[10px] text-slate-400 font-bold uppercase italic">${new Date(t.data_transacao + 'T15:00:00').toLocaleDateString()}</div>
+                        <div class="text-[10px] text-slate-400 font-bold uppercase">${new Date(t.data_transacao + 'T15:00:00').toLocaleDateString()}</div>
                     </div>
                     <div class="text-right">
                         <div class="font-black text-slate-900 italic">R$ ${parseFloat(t.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                         <button onclick="excluirItem('transacoes', '${t.id}')" class="opacity-0 group-hover:opacity-100 text-[9px] text-red-400 font-bold uppercase">Excluir</button>
                     </div>
-                </div>`).join('') : '<div class="p-10 text-center text-slate-300 font-bold uppercase text-xs">Nenhum item selecionado</div>';
+                </div>`).join('') : '<div class="p-10 text-center text-slate-300 font-bold uppercase text-xs">Sem registros</div>';
         }
 
         function alternarFiltroParcelas() {
@@ -244,10 +242,23 @@
             if(idSelecionado) tipoSelecionado === 'banco' ? verDetalhesBanco(idSelecionado) : verDetalhesCartao(idSelecionado);
         }
 
+        // --- FUNÇÃO NOVA: AUTO SELECIONAR BANCO ---
+        function autoSelecionarBanco(cartaoId) {
+            if (!cartaoId) return;
+            const cartaoSelt = cartoes.find(c => c.id === cartaoId);
+            if (cartaoSelt && cartaoSelt.banco_id) {
+                const campoBanco = document.getElementById('t_banco');
+                campoBanco.value = cartaoSelt.banco_id;
+                // Efeito visual de destaque
+                campoBanco.classList.add('ring-2', 'ring-blue-500');
+                setTimeout(() => campoBanco.classList.remove('ring-2', 'ring-blue-500'), 1000);
+            }
+        }
+
         async function excluirItem(tabela, id) {
-            if(!confirm("Excluir item permanentemente?")) return;
+            if(!confirm("Deseja realmente excluir?")) return;
             await _supabase.from(tabela).delete().eq('id', id);
-            carregarDados();
+            fecharModal(); carregarDados();
         }
 
         function abrirModal(tipo, id = null) {
@@ -262,7 +273,11 @@
                 const b = id ? bancos.find(x => x.id === id) : null;
                 document.getElementById('modalTitulo').innerText = id ? "Editar Banco" : "Novo Banco";
                 if(id) { btnExcluir.classList.remove('hidden'); btnExcluir.onclick = () => excluirItem('bancos', id); }
-                corpo.innerHTML = `<input id="n_nome" value="${b?.nome || ''}" placeholder="Nome" class="w-full border-2 p-4 rounded-xl outline-none"><input id="n_saldo" type="number" value="${b?.saldo_inicial || ''}" placeholder="Saldo" class="w-full border-2 p-4 rounded-xl outline-none">`;
+                corpo.innerHTML = `
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Nome do Banco</label>
+                    <input id="n_nome" value="${b?.nome || ''}" class="w-full border-2 p-4 rounded-xl outline-none">
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Saldo Inicial (Opcional)</label>
+                    <input id="n_saldo" type="number" value="${b?.saldo_inicial || ''}" class="w-full border-2 p-4 rounded-xl outline-none">`;
                 btn.onclick = async () => {
                     const obj = { nome: document.getElementById('n_nome').value, saldo_inicial: document.getElementById('n_saldo').value || 0 };
                     id ? await _supabase.from('bancos').update(obj).eq('id', id) : await _supabase.from('bancos').insert(obj);
@@ -274,7 +289,13 @@
                 document.getElementById('modalTitulo').innerText = id ? "Editar Cartão" : "Novo Cartão";
                 if(id) { btnExcluir.classList.remove('hidden'); btnExcluir.onclick = () => excluirItem('cartoes', id); }
                 const options = bancos.map(b => `<option value="${b.id}" ${c?.banco_id === b.id ? 'selected' : ''}>${b.nome}</option>`).join('');
-                corpo.innerHTML = `<input id="n_nome_c" value="${c?.nome || ''}" placeholder="Nome" class="w-full border-2 p-4 rounded-xl"><input id="n_venc_c" type="number" value="${c?.dia_vencimento || 10}" class="w-full border-2 p-4 rounded-xl"><select id="n_banco_c" class="w-full border-2 p-4 rounded-xl outline-none">${options}</select>`;
+                corpo.innerHTML = `
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Nome do Cartão</label>
+                    <input id="n_nome_c" value="${c?.nome || ''}" class="w-full border-2 p-4 rounded-xl">
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Dia do Vencimento</label>
+                    <input id="n_venc_c" type="number" value="${c?.dia_vencimento || 10}" class="w-full border-2 p-4 rounded-xl">
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Banco Vinculado</label>
+                    <select id="n_banco_c" class="w-full border-2 p-4 rounded-xl outline-none">${options}</select>`;
                 btn.onclick = async () => {
                     const obj = { nome: document.getElementById('n_nome_c').value, dia_vencimento: document.getElementById('n_venc_c').value, banco_id: document.getElementById('n_banco_c').value };
                     id ? await _supabase.from('cartoes').update(obj).eq('id', id) : await _supabase.from('cartoes').insert(obj);
@@ -284,15 +305,22 @@
             else if(tipo === 'transacao' || tipo === 'editar_transacao') {
                 const t = id ? transacoes.find(x => x.id === id) : null;
                 document.getElementById('modalTitulo').innerText = id ? "Editar Gasto" : "Lançar Gasto";
-                const optCartao = `<option value="">Dinheiro / Débito</option>` + cartoes.map(c => `<option value="${c.id}" ${t?.cartao_id === c.id ? 'selected' : ''}>${c.nome}</option>`).join('');
+                const optCartao = `<option value="">Dinheiro / Débito (Sem Cartão)</option>` + cartoes.map(c => `<option value="${c.id}" ${t?.cartao_id === c.id ? 'selected' : ''}>${c.nome}</option>`).join('');
                 const optBanco = bancos.map(b => `<option value="${b.id}" ${t?.banco_id === b.id ? 'selected' : ''}>${b.nome}</option>`).join('');
                 corpo.innerHTML = `
-                    <input id="t_desc" value="${t?.descricao || ''}" placeholder="Descrição" class="w-full border-2 p-4 rounded-xl outline-none">
-                    <input id="t_val" type="number" step="0.01" value="${t?.valor || ''}" placeholder="Valor" class="w-full border-2 p-4 rounded-xl outline-none">
+                    <input id="t_desc" value="${t?.descricao || ''}" placeholder="Descrição do gasto" class="w-full border-2 p-4 rounded-xl outline-none">
+                    <input id="t_val" type="number" step="0.01" value="${t?.valor || ''}" placeholder="Valor R$" class="w-full border-2 p-4 rounded-xl outline-none">
                     <input id="t_data" type="date" value="${t?.data_transacao || new Date().toISOString().split('T')[0]}" class="w-full border-2 p-4 rounded-xl outline-none">
-                    <select id="t_cartao" class="w-full border-2 p-4 rounded-xl bg-purple-50 outline-none">${optCartao}</select>
+                    
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Selecione o Cartão</label>
+                    <select id="t_cartao" onchange="autoSelecionarBanco(this.value)" class="w-full border-2 p-4 rounded-xl bg-purple-50 outline-none">${optCartao}</select>
+                    
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Banco de Origem</label>
                     <select id="t_banco" class="w-full border-2 p-4 rounded-xl bg-blue-50 outline-none">${optBanco}</select>
-                    ${!id ? `<input id="t_parc" type="number" min="1" value="1" placeholder="Parcelas" class="w-full border-2 p-4 rounded-xl outline-none">` : ''}
+                    
+                    ${!id ? `
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Nº de Parcelas</label>
+                    <input id="t_parc" type="number" min="1" value="1" class="w-full border-2 p-4 rounded-xl outline-none">` : ''}
                 `;
                 btn.onclick = async () => {
                     const obj = { 
