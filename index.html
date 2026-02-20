@@ -7,29 +7,28 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Scrollbar fininha para ficar elegante */
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
-<body class="bg-slate-50 font-sans text-slate-900">
+<body class="bg-slate-50 font-sans text-slate-900 text-sm md:text-base">
 
     <div class="flex flex-col lg:flex-row h-screen overflow-hidden">
         
         <div class="w-full lg:w-96 bg-white border-r border-slate-200 flex flex-col shadow-xl z-10">
             <div class="p-4 border-b bg-slate-100 flex justify-between items-center">
                 <h2 class="font-black text-xl tracking-tighter text-slate-700 uppercase">Minhas Contas</h2>
-                <select id="filtroMesAno" onchange="carregarDados()" class="text-sm font-bold border-2 border-blue-200 rounded-lg p-1 bg-white focus:ring-2 focus:ring-blue-500 outline-none"></select>
+                <select id="filtroMesAno" onchange="carregarDados()" class="text-xs font-bold border-2 border-blue-200 rounded-lg p-1 bg-white outline-none"></select>
             </div>
             
             <div class="flex-grow overflow-y-auto p-4 space-y-6">
                 <div>
-                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">🏦 Bancos e Débito</h3>
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">🏦 Bancos e Débito</h3>
                     <div id="listaBancos" class="space-y-2"></div>
                 </div>
 
                 <div>
-                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">💳 Cartões de Crédito</h3>
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">💳 Cartões de Crédito</h3>
                     <div id="listaCartoes" class="space-y-2"></div>
                 </div>
             </div>
@@ -43,17 +42,19 @@
 
         <div class="flex-grow overflow-y-auto bg-slate-50 p-4 md:p-8">
             <div id="detalheTitulo" class="mb-6">
-                <h1 class="text-3xl font-black text-slate-800">Resumo Geral</h1>
-                <p class="text-slate-500 font-medium">Selecione uma conta ao lado para filtrar.</p>
+                <h1 class="text-2xl md:text-3xl font-black text-slate-800">Resumo Geral</h1>
+                <p class="text-slate-500 font-medium">Selecione uma conta ao lado.</p>
             </div>
-            <div id="listaMovimentacoes" class="max-w-3xl space-y-3">
-                </div>
+            <div id="listaMovimentacoes" class="max-w-3xl space-y-3 pb-10"></div>
         </div>
     </div>
 
     <div id="modal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center p-4 z-50 backdrop-blur-sm">
-        <div class="bg-white p-6 rounded-3xl w-full max-w-md shadow-2xl scale-95 transition-transform">
-            <h2 id="modalTitulo" class="text-2xl font-black mb-6 text-slate-800 tracking-tight"></h2>
+        <div class="bg-white p-6 rounded-3xl w-full max-w-md shadow-2xl transition-all">
+            <div class="flex justify-between items-start mb-6">
+                <h2 id="modalTitulo" class="text-xl font-black text-slate-800 tracking-tight"></h2>
+                <button id="btnExcluirItem" class="hidden text-red-500 hover:bg-red-50 p-2 rounded-lg text-xs font-bold uppercase">🗑️ Excluir</button>
+            </div>
             <div id="modalCorpo" class="space-y-4 text-sm font-medium"></div>
             <div class="flex justify-end gap-3 mt-10">
                 <button onclick="fecharModal()" class="px-6 py-3 text-slate-400 font-bold hover:text-slate-600 uppercase text-xs">Cancelar</button>
@@ -63,15 +64,11 @@
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://isqwlkrkjbczamuasgix.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzcXdsa3JramJjemFtdWFzZ2l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjcyNzAsImV4cCI6MjA4NzAwMzI3MH0.g_aFpoVS4sRwpkBcZZ-31AlW6ZfPK7l_7-YfwRI7g6g';
+        const SUPABASE_URL = 'COLE_AQUI_SUA_URL';
+        const SUPABASE_KEY = 'COLE_AQUI_SUA_CHAVE_ANON';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let bancos = [];
-        let cartoes = [];
-        let transacoes = [];
-        let idSelecionado = null; // Guarda o banco ou cartão que está aberto
-        let tipoSelecionado = null; // 'banco' ou 'cartao'
+        let bancos = [], cartoes = [], transacoes = [], idSelecionado = null, tipoSelecionado = null;
 
         function configurarFiltroData() {
             const select = document.getElementById('filtroMesAno');
@@ -89,165 +86,172 @@
         async function carregarDados() {
             const { data: b } = await _supabase.from('bancos').select('*').order('nome');
             const { data: c } = await _supabase.from('cartoes').select('*, bancos(nome)');
-            const { data: t } = await _supabase.from('transacoes').select('*');
-
-            bancos = b || [];
-            cartoes = c || [];
-            transacoes = t || [];
-
+            const { data: t } = await _supabase.from('transacoes').select('*').order('data_transacao', {ascending: false});
+            bancos = b || []; cartoes = c || []; transacoes = t || [];
             renderizarListas();
-            // Atualiza o extrato automaticamente se houver algo selecionado
-            if(idSelecionado) {
-                tipoSelecionado === 'banco' ? verDetalhesBanco(idSelecionado) : verDetalhesCartao(idSelecionado);
-            }
+            if(idSelecionado) tipoSelecionado === 'banco' ? verDetalhesBanco(idSelecionado) : verDetalhesCartao(idSelecionado);
         }
 
         function renderizarListas() {
             const filtroRaw = document.getElementById('filtroMesAno').value;
             
-            // Renderizar Bancos
-            const lb = document.getElementById('listaBancos');
-            lb.innerHTML = bancos.map(b => {
+            document.getElementById('listaBancos').innerHTML = bancos.map(b => {
                 const totalGasto = transacoes.filter(t => {
                     const dT = new Date(t.data_transacao + 'T15:00:00');
                     return t.banco_id === b.id && `${dT.getFullYear()}-${String(dT.getMonth() + 1).padStart(2, '0')}` === filtroRaw;
                 }).reduce((acc, curr) => acc + parseFloat(curr.valor), 0);
-                
                 return `
-                    <div onclick="verDetalhesBanco('${b.id}')" class="p-4 bg-white rounded-2xl cursor-pointer border-2 ${idSelecionado === b.id ? 'border-blue-500 bg-blue-50' : 'border-transparent shadow-sm'} hover:border-blue-200 transition-all">
-                        <div class="font-bold text-slate-700">${b.nome}</div>
-                        <div class="text-[11px] font-black text-blue-600 uppercase">Gasto Mês: R$ ${totalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                    <div class="group relative p-4 bg-white rounded-2xl cursor-pointer border-2 ${idSelecionado === b.id ? 'border-blue-500 bg-blue-50' : 'border-transparent shadow-sm'}">
+                        <div onclick="verDetalhesBanco('${b.id}')">
+                            <div class="font-bold text-slate-700">${b.nome}</div>
+                            <div class="text-[10px] font-black text-blue-600">Gasto: R$ ${totalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                        </div>
+                        <button onclick="abrirModal('editar_banco', '${b.id}')" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-slate-100 text-[9px] p-1 rounded font-bold uppercase">Edit</button>
                     </div>
                 `;
-            }).join('') || '<p class="text-slate-400 text-[10px] italic">Nenhum banco.</p>';
+            }).join('');
 
-            // Renderizar Cartões
-            const lc = document.getElementById('listaCartoes');
-            lc.innerHTML = cartoes.map(c => {
+            document.getElementById('listaCartoes').innerHTML = cartoes.map(c => {
                 const totalFatura = transacoes.filter(t => {
                     if (t.cartao_id !== c.id) return false;
                     const dT = new Date(t.data_transacao + 'T15:00:00');
-                    let m = dT.getMonth(); let a = dT.getFullYear();
+                    let m = dT.getMonth(), a = dT.getFullYear();
                     if (dT.getDate() >= (c.dia_vencimento || 10)) { m++; if(m>11){m=0;a++;} }
                     return `${a}-${String(m + 1).padStart(2, '0')}` === filtroRaw;
                 }).reduce((acc, curr) => acc + parseFloat(curr.valor), 0);
-
                 return `
-                    <div class="group relative p-4 bg-white rounded-2xl cursor-pointer border-2 ${idSelecionado === c.id ? 'border-purple-500 bg-purple-50' : 'border-transparent shadow-sm'} hover:border-purple-200 transition-all">
+                    <div class="group relative p-4 bg-white rounded-2xl cursor-pointer border-2 ${idSelecionado === c.id ? 'border-purple-500 bg-purple-50' : 'border-transparent shadow-sm'}">
                         <div onclick="verDetalhesCartao('${c.id}')">
                             <div class="font-bold text-slate-700">${c.nome}</div>
-                            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Vencimento: dia ${c.dia_vencimento || 10}</div>
+                            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter italic">Vencimento dia ${c.dia_vencimento || 10}</div>
                             <div class="text-xs font-black text-purple-700">Fatura: R$ ${totalFatura.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                         </div>
-                        <button onclick="abrirModal('editar_cartao', '${c.id}')" class="absolute top-2 right-2 bg-slate-100 text-[9px] px-2 py-1 rounded-md font-bold uppercase hover:bg-slate-200">Edit</button>
+                        <button onclick="abrirModal('editar_cartao', '${c.id}')" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-slate-100 text-[9px] p-1 rounded font-bold uppercase">Edit</button>
                     </div>
                 `;
-            }).join('') || '<p class="text-slate-400 text-[10px] italic">Nenhum cartão.</p>';
+            }).join('');
         }
 
         async function verDetalhesBanco(id) {
-            idSelecionado = id; tipoSelecionado = 'banco';
-            renderizarListas();
+            idSelecionado = id; tipoSelecionado = 'banco'; renderizarListas();
             const filtroRaw = document.getElementById('filtroMesAno').value;
             const banco = bancos.find(b => b.id === id);
             const filtrados = transacoes.filter(t => {
                 const d = new Date(t.data_transacao + 'T15:00:00');
                 return t.banco_id === id && `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === filtroRaw;
             });
-            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-3xl font-black text-slate-800">${banco.nome}</h1><p class="text-blue-500 font-bold uppercase text-xs">Extrato de Débito • ${filtroRaw}</p>`;
+            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-2xl font-black">${banco.nome}</h1><p class="text-xs font-bold text-blue-500 uppercase">Resumo Mês ${filtroRaw}</p>`;
             renderizarTransacoes(filtrados);
         }
 
         async function verDetalhesCartao(id) {
-            idSelecionado = id; tipoSelecionado = 'cartao';
-            renderizarListas();
+            idSelecionado = id; tipoSelecionado = 'cartao'; renderizarListas();
             const filtroRaw = document.getElementById('filtroMesAno').value;
             const cartao = cartoes.find(c => c.id === id);
             const filtrados = transacoes.filter(t => {
                 if (t.cartao_id !== id) return false;
                 const d = new Date(t.data_transacao + 'T15:00:00');
-                let m = d.getMonth(); let a = d.getFullYear();
+                let m = d.getMonth(), a = d.getFullYear();
                 if (d.getDate() >= (cartao.dia_vencimento || 10)) { m++; if(m>11){m=0;a++;} }
                 return `${a}-${String(m + 1).padStart(2, '0')}` === filtroRaw;
             });
-            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-3xl font-black text-slate-800">${cartao.nome}</h1><p class="text-purple-500 font-bold uppercase text-xs">Compras na Fatura • ${filtroRaw}</p>`;
+            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-2xl font-black">${cartao.nome}</h1><p class="text-xs font-bold text-purple-500 uppercase">Fatura Vence em ${filtroRaw}</p>`;
             renderizarTransacoes(filtrados);
         }
 
         function renderizarTransacoes(lista) {
             const container = document.getElementById('listaMovimentacoes');
             container.innerHTML = lista.length ? lista.map(t => `
-                <div class="flex justify-between items-center p-5 bg-white shadow-sm rounded-2xl border-l-8 ${t.cartao_id ? 'border-purple-500' : 'border-blue-500'}">
-                    <div>
-                        <div class="font-bold text-slate-700">${t.descricao} ${t.total_parcelas > 1 ? `<span class="text-blue-500 text-[10px] ml-1">[${t.parcela_atual}/${t.total_parcelas}]</span>` : ''}</div>
-                        <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">${new Date(t.data_transacao + 'T15:00:00').toLocaleDateString()}</div>
+                <div class="group flex justify-between items-center p-4 bg-white shadow-sm rounded-2xl border-l-8 ${t.cartao_id ? 'border-purple-500' : 'border-blue-500'}">
+                    <div onclick="abrirModal('editar_transacao', '${t.id}')" class="flex-grow cursor-pointer">
+                        <div class="font-bold text-slate-700">${t.descricao} ${t.total_parcelas > 1 ? `<span class="text-blue-500 text-[10px]">[${t.parcela_atual}/${t.total_parcelas}]</span>` : ''}</div>
+                        <div class="text-[10px] text-slate-400 font-bold uppercase">${new Date(t.data_transacao + 'T15:00:00').toLocaleDateString()}</div>
                     </div>
-                    <span class="font-black text-slate-900 text-lg italic">R$ ${parseFloat(t.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                    <div class="text-right">
+                        <div class="font-black text-slate-900 italic">R$ ${parseFloat(t.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                        <button onclick="excluirItem('transacoes', '${t.id}')" class="opacity-0 group-hover:opacity-100 text-[10px] text-red-400 font-bold uppercase hover:text-red-600 transition-all">Excluir</button>
+                    </div>
                 </div>
-            `).join('') : '<div class="p-20 text-center text-slate-300 font-bold uppercase tracking-widest">Nada por aqui...</div>';
+            `).join('') : '<div class="p-20 text-center text-slate-300 font-bold">NADA LANÇADO</div>';
+        }
+
+        async function excluirItem(tabela, id) {
+            if(!confirm("Tem certeza que deseja excluir? Isso não pode ser desfeito!")) return;
+            await _supabase.from(tabela).delete().eq('id', id);
+            fecharModal(); carregarDados();
         }
 
         function abrirModal(tipo, id = null) {
             const modal = document.getElementById('modal');
             const corpo = document.getElementById('modalCorpo');
             const btn = document.getElementById('btnConfirmar');
+            const btnExcluir = document.getElementById('btnExcluirItem');
+            
             modal.classList.replace('hidden', 'flex');
+            btnExcluir.classList.add('hidden');
 
-            if(tipo === 'banco') {
-                document.getElementById('modalTitulo').innerText = "🏦 Novo Banco";
-                corpo.innerHTML = `<input id="n_nome" placeholder="Nome do Banco" class="w-full border-2 p-4 rounded-xl outline-none focus:border-blue-500 transition-all"><input id="n_saldo" type="number" placeholder="Saldo Inicial R$" class="w-full border-2 p-4 rounded-xl outline-none">`;
+            if(tipo === 'banco' || tipo === 'editar_banco') {
+                const b = id ? bancos.find(x => x.id === id) : null;
+                document.getElementById('modalTitulo').innerText = id ? "Editar Banco" : "Novo Banco";
+                if(id) { btnExcluir.classList.remove('hidden'); btnExcluir.onclick = () => excluirItem('bancos', id); }
+                corpo.innerHTML = `<input id="n_nome" value="${b?.nome || ''}" placeholder="Nome" class="w-full border-2 p-4 rounded-xl"><input id="n_saldo" type="number" value="${b?.saldo_inicial || ''}" placeholder="Saldo" class="w-full border-2 p-4 rounded-xl">`;
                 btn.onclick = async () => {
-                    await _supabase.from('bancos').insert({ nome: document.getElementById('n_nome').value, saldo_inicial: document.getElementById('n_saldo').value || 0 });
+                    const obj = { nome: document.getElementById('n_nome').value, saldo_inicial: document.getElementById('n_saldo').value || 0 };
+                    id ? await _supabase.from('bancos').update(obj).eq('id', id) : await _supabase.from('bancos').insert(obj);
                     fecharModal(); carregarDados();
                 };
             } 
             else if(tipo === 'cartao' || tipo === 'editar_cartao') {
                 const c = id ? cartoes.find(x => x.id === id) : null;
-                document.getElementById('modalTitulo').innerText = id ? "✏️ Editar Cartão" : "💳 Novo Cartão";
+                document.getElementById('modalTitulo').innerText = id ? "Editar Cartão" : "Novo Cartão";
+                if(id) { btnExcluir.classList.remove('hidden'); btnExcluir.onclick = () => excluirItem('cartoes', id); }
                 const options = bancos.map(b => `<option value="${b.id}" ${c?.banco_id === b.id ? 'selected' : ''}>${b.nome}</option>`).join('');
-                corpo.innerHTML = `
-                    <input id="n_nome_c" value="${c?.nome || ''}" placeholder="Nome do Cartão" class="w-full border-2 p-4 rounded-xl">
-                    <div class="flex flex-col"><label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1">Dia Vencimento:</label>
-                    <input id="n_venc_c" type="number" value="${c?.dia_vencimento || 10}" class="w-full border-2 p-4 rounded-xl"></div>
-                    <select id="n_banco_c" class="w-full border-2 p-4 rounded-xl bg-slate-50">${options}</select>
-                `;
+                corpo.innerHTML = `<input id="n_nome_c" value="${c?.nome || ''}" placeholder="Nome" class="w-full border-2 p-4 rounded-xl"><input id="n_venc_c" type="number" value="${c?.dia_vencimento || 10}" class="w-full border-2 p-4 rounded-xl"><select id="n_banco_c" class="w-full border-2 p-4 rounded-xl">${options}</select>`;
                 btn.onclick = async () => {
                     const obj = { nome: document.getElementById('n_nome_c').value, dia_vencimento: document.getElementById('n_venc_c').value, banco_id: document.getElementById('n_banco_c').value };
                     id ? await _supabase.from('cartoes').update(obj).eq('id', id) : await _supabase.from('cartoes').insert(obj);
                     fecharModal(); carregarDados();
                 };
             }
-            else if(tipo === 'transacao') {
-                document.getElementById('modalTitulo').innerText = "💸 Lançar Gasto";
-                const optCartao = `<option value="">🛒 Gasto no Débito (Dinheiro)</option>` + cartoes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
-                const optBanco = bancos.map(b => `<option value="${b.id}">${b.nome}</option>`).join('');
+            else if(tipo === 'transacao' || tipo === 'editar_transacao') {
+                const t = id ? transacoes.find(x => x.id === id) : null;
+                document.getElementById('modalTitulo').innerText = id ? "Editar Gasto" : "Lançar Gasto";
+                const optCartao = `<option value="">Débito Direto</option>` + cartoes.map(c => `<option value="${c.id}" ${t?.cartao_id === c.id ? 'selected' : ''}>${c.nome}</option>`).join('');
+                const optBanco = bancos.map(b => `<option value="${b.id}" ${t?.banco_id === b.id ? 'selected' : ''}>${b.nome}</option>`).join('');
                 corpo.innerHTML = `
-                    <input id="t_desc" placeholder="O que foi comprado?" class="w-full border-2 p-4 rounded-xl">
-                    <input id="t_val" type="number" step="0.01" placeholder="Valor Total R$" class="w-full border-2 p-4 rounded-xl">
-                    <input id="t_data" type="date" value="${new Date().toISOString().split('T')[0]}" class="w-full border-2 p-4 rounded-xl">
+                    <input id="t_desc" value="${t?.descricao || ''}" placeholder="Descrição" class="w-full border-2 p-4 rounded-xl">
+                    <input id="t_val" type="number" step="0.01" value="${t?.valor || ''}" placeholder="Valor" class="w-full border-2 p-4 rounded-xl">
+                    <input id="t_data" type="date" value="${t?.data_transacao || new Date().toISOString().split('T')[0]}" class="w-full border-2 p-4 rounded-xl">
                     <select id="t_cartao" class="w-full border-2 p-4 rounded-xl bg-purple-50">${optCartao}</select>
                     <select id="t_banco" class="w-full border-2 p-4 rounded-xl bg-blue-50">${optBanco}</select>
-                    <input id="t_parc" type="number" min="1" value="1" placeholder="Número de Parcelas" class="w-full border-2 p-4 rounded-xl">
+                    ${!id ? `<input id="t_parc" type="number" min="1" value="1" class="w-full border-2 p-4 rounded-xl">` : ''}
                 `;
                 btn.onclick = async () => {
-                    const desc = document.getElementById('t_desc').value; const val = parseFloat(document.getElementById('t_val').value);
-                    const b_id = document.getElementById('t_banco').value; const c_id = document.getElementById('t_cartao').value || null;
-                    const parc = parseInt(document.getElementById('t_parc').value) || 1; const dataB = document.getElementById('t_data').value;
-                    const ins = [];
-                    for(let i=0; i<parc; i++) {
-                        let d = new Date(dataB + 'T15:00:00'); d.setMonth(d.getMonth() + i);
-                        ins.push({ descricao: desc, valor: val/parc, data_transacao: d.toISOString().split('T')[0], banco_id: b_id, cartao_id: c_id, parcela_atual: i+1, total_parcelas: parc });
+                    const obj = { 
+                        descricao: document.getElementById('t_desc').value, 
+                        valor: parseFloat(document.getElementById('t_val').value), 
+                        data_transacao: document.getElementById('t_data').value,
+                        banco_id: document.getElementById('t_banco').value,
+                        cartao_id: document.getElementById('t_cartao').value || null
+                    };
+                    if(id) {
+                        await _supabase.from('transacoes').update(obj).eq('id', id);
+                    } else {
+                        const parc = parseInt(document.getElementById('t_parc').value) || 1;
+                        const ins = [];
+                        for(let i=0; i<parc; i++) {
+                            let d = new Date(obj.data_transacao + 'T15:00:00'); d.setMonth(d.getMonth() + i);
+                            ins.push({ ...obj, valor: obj.valor/parc, data_transacao: d.toISOString().split('T')[0], parcela_atual: i+1, total_parcelas: parc });
+                        }
+                        await _supabase.from('transacoes').insert(ins);
                     }
-                    await _supabase.from('transacoes').insert(ins);
                     fecharModal(); carregarDados();
                 };
             }
         }
 
-        function fecharModal() { document.getElementById('modal').classList.replace('flex', 'hidden'); document.getElementById('modalCorpo').innerHTML = ''; }
-
-        configurarFiltroData();
-        carregarDados();
+        function fecharModal() { document.getElementById('modal').classList.replace('flex', 'hidden'); }
+        configurarFiltroData(); carregarDados();
     </script>
 </body>
 </html>
