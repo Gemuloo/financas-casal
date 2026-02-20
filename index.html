@@ -9,15 +9,26 @@
     <style>
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        /* Transição suave para o menu no celular */
+        #sidebar { transition: transform 0.3s ease-in-out; }
     </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 text-sm md:text-base">
 
-    <div class="flex flex-col lg:flex-row h-screen overflow-hidden">
+    <div class="lg:hidden bg-slate-800 text-white p-4 flex justify-between items-center sticky top-0 z-30 shadow-lg">
+        <h2 class="font-black tracking-tighter uppercase text-sm">Financeiro Pro</h2>
+        <button onclick="toggleSidebar()" class="bg-blue-600 px-4 py-2 rounded-lg font-bold text-xs uppercase">📂 Contas / Bancos</button>
+    </div>
+
+    <div class="flex flex-col lg:flex-row h-screen overflow-hidden relative">
         
-        <div class="w-full lg:w-96 bg-white border-r border-slate-200 flex flex-col shadow-xl z-10">
-            <div class="p-4 border-b bg-slate-100">
-                <h2 class="font-black text-xl tracking-tighter text-slate-700 uppercase mb-3">Minhas Contas</h2>
+        <div id="sidebar" class="fixed inset-y-0 left-0 z-40 w-80 bg-white border-r border-slate-200 flex flex-col shadow-2xl transform -translate-x-full lg:translate-x-0 lg:static lg:w-96 lg:shadow-none">
+            
+            <div class="p-4 border-b bg-slate-100 flex flex-col gap-3">
+                <div class="flex justify-between items-center">
+                    <h2 class="font-black text-xl tracking-tighter text-slate-700 uppercase">Minhas Contas</h2>
+                    <button onclick="toggleSidebar()" class="lg:hidden text-slate-400 font-bold">✕</button>
+                </div>
                 <div class="flex gap-2">
                     <select id="filtroMes" onchange="carregarDados()" class="flex-grow text-xs font-bold border-2 border-blue-200 rounded-lg p-2 bg-white outline-none">
                         <option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option>
@@ -47,41 +58,45 @@
             </div>
         </div>
 
+        <div id="overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden"></div>
+
         <div class="flex-grow overflow-y-auto bg-slate-50 p-4 md:p-8">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 max-w-4xl">
-                <div class="bg-white p-5 rounded-3xl shadow-sm border-b-4 border-blue-400">
-                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">🛒 À Vista / Débito</div>
-                    <div id="resumoAVista" class="text-xl font-black text-slate-800">R$ 0,00</div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6 max-w-4xl">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border-b-4 border-blue-400">
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">À Vista</div>
+                    <div id="resumoAVista" class="text-sm md:text-xl font-black text-slate-800">R$ 0,00</div>
                 </div>
-                <div class="bg-white p-5 rounded-3xl shadow-sm border-b-4 border-orange-400">
-                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">⏳ Parcelados</div>
-                    <div id="resumoParcelado" class="text-xl font-black text-orange-600">R$ 0,00</div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border-b-4 border-orange-400">
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Parcelados</div>
+                    <div id="resumoParcelado" class="text-sm md:text-xl font-black text-orange-600">R$ 0,00</div>
                 </div>
-                <div class="bg-white p-5 rounded-3xl shadow-sm border-b-4 border-slate-800">
-                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">💰 Total Geral</div>
-                    <div id="resumoTotal" class="text-xl font-black text-slate-900">R$ 0,00</div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border-b-4 border-slate-800 col-span-2 md:col-span-1">
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Geral</div>
+                    <div id="resumoTotal" class="text-sm md:text-xl font-black text-slate-900">R$ 0,00</div>
                 </div>
             </div>
 
-            <div id="detalheTituloContainer" class="mb-4 flex flex-col md:flex-row md:items-end justify-between gap-4 border-t pt-6">
+            <div id="detalheTituloContainer" class="mb-4 flex flex-col md:flex-row md:items-end justify-between gap-4 border-t pt-4">
                 <div id="detalheTitulo">
-                    <h1 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">Extrato Detalhado</h1>
-                    <p class="text-slate-500 font-medium text-sm">Selecione uma conta ao lado.</p>
+                    <h1 class="text-xl font-black text-slate-800 uppercase tracking-tighter">Extrato</h1>
+                    <p class="text-slate-500 font-medium text-xs">Selecione uma conta no menu.</p>
                 </div>
-                <button onclick="alternarFiltroParcelas()" id="btnFiltroParcelas" class="flex items-center gap-2 px-4 py-2 rounded-full border-2 border-slate-200 text-[10px] font-black uppercase transition-all hover:bg-slate-100">
+                <button onclick="alternarFiltroParcelas()" id="btnFiltroParcelas" class="flex items-center justify-center gap-2 px-4 py-2 rounded-full border-2 border-slate-200 text-[9px] font-black uppercase transition-all bg-white shadow-sm">
                     <span id="indicadorFiltro" class="w-2 h-2 rounded-full bg-slate-300"></span>
-                    Filtrar Parcelados
+                    Exibir Só Parcelados
                 </button>
             </div>
-            <div id="listaMovimentacoes" class="max-w-3xl space-y-3 pb-10"></div>
+            
+            <div id="listaMovimentacoes" class="max-w-3xl space-y-3 pb-24"></div>
         </div>
     </div>
 
     <div id="modal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center p-4 z-50 backdrop-blur-sm">
-        <div class="bg-white p-6 rounded-3xl w-full max-w-md shadow-2xl transition-all">
+        <div class="bg-white p-6 rounded-3xl w-full max-w-md shadow-2xl overflow-y-auto max-h-[90vh]">
             <div class="flex justify-between items-start mb-6">
                 <h2 id="modalTitulo" class="text-xl font-black text-slate-800"></h2>
-                <button id="btnExcluirItem" class="hidden text-red-500 hover:bg-red-50 p-2 rounded-lg text-xs font-bold uppercase">🗑️ Excluir</button>
+                <button onclick="fecharModal()" class="text-slate-400 font-bold p-2">✕</button>
             </div>
             <div id="modalCorpo" class="space-y-4"></div>
             <div class="flex justify-end gap-3 mt-10">
@@ -98,17 +113,35 @@
 
         let bancos = [], cartoes = [], transacoes = [], idSelecionado = null, tipoSelecionado = null, filtroSomenteParcelados = false;
 
+        // --- FUNÇÕES DE INTERFACE MOBILE ---
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            const ov = document.getElementById('overlay');
+            const isHidden = sb.classList.contains('-translate-x-full');
+            
+            if(isHidden) {
+                sb.classList.remove('-translate-x-full');
+                ov.classList.remove('hidden');
+            } else {
+                sb.classList.add('-translate-x-full');
+                ov.classList.add('hidden');
+            }
+        }
+
+        function fecharSidebarMobile() {
+            if (window.innerWidth < 1024) {
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+                document.getElementById('overlay').classList.add('hidden');
+            }
+        }
+
         function configurarFiltroData() {
             const selMes = document.getElementById('filtroMes');
             const selAno = document.getElementById('filtroAno');
             const agora = new Date();
-            
             selMes.value = String(agora.getMonth() + 1).padStart(2, '0');
-            
             const anoAtual = agora.getFullYear();
-            for(let i = anoAtual - 2; i <= anoAtual + 3; i++) {
-                selAno.add(new Option(i, i));
-            }
+            for(let i = anoAtual - 1; i <= anoAtual + 2; i++) { selAno.add(new Option(i, i)); }
             selAno.value = anoAtual;
         }
 
@@ -117,7 +150,6 @@
             const { data: c } = await _supabase.from('cartoes').select('*, bancos(nome)');
             const { data: t } = await _supabase.from('transacoes').select('*').order('data_transacao', {ascending: false});
             bancos = b || []; cartoes = c || []; transacoes = t || [];
-            
             calcularResumoGlobal();
             renderizarListas();
             if(idSelecionado) {
@@ -132,11 +164,9 @@
         function calcularResumoGlobal() {
             const filtroRaw = getMesAnoFiltro();
             let somaAVista = 0, somaParcelado = 0;
-
             transacoes.forEach(t => {
                 const dataT = new Date(t.data_transacao + 'T15:00:00');
                 let mesRef = `${dataT.getFullYear()}-${String(dataT.getMonth() + 1).padStart(2, '0')}`;
-
                 if (t.cartao_id) {
                     const cartao = cartoes.find(c => c.id === t.cartao_id);
                     if (cartao && dataT.getDate() >= (cartao.dia_vencimento || 10)) {
@@ -145,14 +175,12 @@
                         mesRef = `${a}-${String(m + 1).padStart(2, '0')}`;
                     }
                 }
-
                 if (mesRef === filtroRaw) {
                     const valor = parseFloat(t.valor);
                     if (t.total_parcelas > 1) somaParcelado += valor;
                     else somaAVista += valor;
                 }
             });
-
             document.getElementById('resumoAVista').innerText = somaAVista.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
             document.getElementById('resumoParcelado').innerText = somaParcelado.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
             document.getElementById('resumoTotal').innerText = (somaAVista + somaParcelado).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
@@ -166,7 +194,7 @@
                     return t.banco_id === b.id && `${dT.getFullYear()}-${String(dT.getMonth() + 1).padStart(2, '0')}` === filtroRaw;
                 }).reduce((acc, curr) => acc + parseFloat(curr.valor), 0);
                 return `<div class="group relative p-4 bg-white rounded-2xl cursor-pointer border-2 ${idSelecionado === b.id ? 'border-blue-500 bg-blue-50' : 'border-transparent shadow-sm'}">
-                        <div onclick="verDetalhesBanco('${b.id}')">
+                        <div onclick="verDetalhesBanco('${b.id}'); fecharSidebarMobile();">
                             <div class="font-bold text-slate-700">${b.nome}</div>
                             <div class="text-[10px] font-black text-blue-600 uppercase">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                         </div>
@@ -183,7 +211,7 @@
                     return `${a}-${String(m + 1).padStart(2, '0')}` === filtroRaw;
                 }).reduce((acc, curr) => acc + parseFloat(curr.valor), 0);
                 return `<div class="group relative p-4 bg-white rounded-2xl cursor-pointer border-2 ${idSelecionado === c.id ? 'border-purple-500 bg-purple-50' : 'border-transparent shadow-sm'}">
-                        <div onclick="verDetalhesCartao('${c.id}')">
+                        <div onclick="verDetalhesCartao('${c.id}'); fecharSidebarMobile();">
                             <div class="font-bold text-slate-700">${c.nome}</div>
                             <div class="text-[10px] text-purple-600 font-bold uppercase italic tracking-tighter">Fatura: R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                         </div>
@@ -201,7 +229,7 @@
                 return t.banco_id === id && `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === filtroRaw;
             });
             if(filtroSomenteParcelados) filtrados = filtrados.filter(t => t.total_parcelas > 1);
-            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-2xl font-black">${banco.nome}</h1><p class="text-[10px] font-bold text-blue-500 uppercase">Resumo ${filtroRaw}</p>`;
+            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-xl font-black">${banco.nome}</h1><p class="text-[9px] font-bold text-blue-500 uppercase">Mês ${filtroRaw}</p>`;
             renderizarTransacoes(filtrados);
         }
 
@@ -217,87 +245,51 @@
                 return `${a}-${String(m + 1).padStart(2, '0')}` === filtroRaw;
             });
             if(filtroSomenteParcelados) filtrados = filtrados.filter(t => t.total_parcelas > 1);
-            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-2xl font-black">${cartao.nome}</h1><p class="text-[10px] font-bold text-purple-500 uppercase">Fatura ${filtroRaw}</p>`;
+            document.getElementById('detalheTitulo').innerHTML = `<h1 class="text-xl font-black">${cartao.nome}</h1><p class="text-[9px] font-bold text-purple-500 uppercase">Fatura ${filtroRaw}</p>`;
             renderizarTransacoes(filtrados);
         }
 
         function renderizarTransacoes(lista) {
             const container = document.getElementById('listaMovimentacoes');
             container.innerHTML = lista.length ? lista.map(t => `
-                <div class="group flex justify-between items-center p-4 bg-white shadow-sm rounded-2xl border-l-8 ${t.cartao_id ? 'border-purple-500' : 'border-blue-500'}">
+                <div class="group flex justify-between items-center p-4 bg-white shadow-sm rounded-xl border-l-4 ${t.cartao_id ? 'border-purple-500' : 'border-blue-500'}">
                     <div onclick="abrirModal('editar_transacao', '${t.id}')" class="flex-grow cursor-pointer">
-                        <div class="font-bold text-slate-700">${t.descricao} ${t.total_parcelas > 1 ? `<span class="text-orange-500 text-[10px] ml-1 font-black">[${t.parcela_atual}/${t.total_parcelas}]</span>` : ''}</div>
-                        <div class="text-[10px] text-slate-400 font-bold uppercase italic">${new Date(t.data_transacao + 'T15:00:00').toLocaleDateString()}</div>
+                        <div class="font-bold text-slate-700 leading-tight">${t.descricao} ${t.total_parcelas > 1 ? `<span class="text-orange-500 text-[9px] ml-1 font-black">[${t.parcela_atual}/${t.total_parcelas}]</span>` : ''}</div>
+                        <div class="text-[9px] text-slate-400 font-bold uppercase">${new Date(t.data_transacao + 'T15:00:00').toLocaleDateString()}</div>
                     </div>
                     <div class="text-right">
                         <div class="font-black text-slate-900 italic">R$ ${parseFloat(t.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
-                        <button onclick="confirmarExclusao('${t.id}')" class="opacity-0 group-hover:opacity-100 text-[9px] text-red-400 font-bold uppercase">Excluir</button>
+                        <button onclick="confirmarExclusao('${t.id}')" class="text-[9px] text-red-400 font-black uppercase lg:opacity-0 lg:group-hover:opacity-100">Excluir</button>
                     </div>
                 </div>`).join('') : '<div class="p-10 text-center text-slate-300 font-bold uppercase text-xs">Sem registros</div>';
         }
 
-        // --- NOVA LÓGICA DE EXCLUSÃO ---
         async function confirmarExclusao(id) {
             const t = transacoes.find(x => x.id === id);
             if (!t) return;
-
             if (t.total_parcelas <= 1) {
-                if (confirm("Deseja excluir este gasto?")) {
-                    await _supabase.from('transacoes').delete().eq('id', id);
-                    carregarDados();
-                }
+                if (confirm("Excluir este gasto?")) { await _supabase.from('transacoes').delete().eq('id', id); carregarDados(); }
                 return;
             }
-
-            // Se for parcelado, oferece opções
-            const opcao = prompt(
-                "Este gasto é parcelado. O que deseja fazer?\n\n" +
-                "1 - Excluir APENAS esta parcela\n" +
-                "2 - Excluir esta e todas as PRÓXIMAS parcelas\n" +
-                "3 - Excluir TODO o parcelamento (as " + t.total_parcelas + " parcelas)\n\n" +
-                "Digite o número da opção:"
-            );
-
-            if (opcao === "1") {
-                await _supabase.from('transacoes').delete().eq('id', id);
-            } else if (opcao === "2") {
-                await _supabase.from('transacoes').delete()
-                    .eq('descricao', t.descricao)
-                    .eq('cartao_id', t.cartao_id)
-                    .gte('parcela_atual', t.parcela_atual);
-            } else if (opcao === "3") {
-                await _supabase.from('transacoes').delete()
-                    .eq('descricao', t.descricao)
-                    .eq('cartao_id', t.cartao_id);
-            } else {
-                return; // Cancelou
-            }
-
+            const o = prompt("Parcelado! Opções:\n1-Apenas esta\n2-Esta e próximas\n3-Todo o parcelamento");
+            if (o === "1") await _supabase.from('transacoes').delete().eq('id', id);
+            else if (o === "2") await _supabase.from('transacoes').delete().eq('descricao', t.descricao).eq('cartao_id', t.cartao_id).gte('parcela_atual', t.parcela_atual);
+            else if (o === "3") await _supabase.from('transacoes').delete().eq('descricao', t.descricao).eq('cartao_id', t.cartao_id);
+            else return;
             carregarDados();
         }
 
         function autoSelecionarBanco(cartaoId) {
             if (!cartaoId) return;
-            const cartaoSelt = cartoes.find(c => c.id === cartaoId);
-            if (cartaoSelt && cartaoSelt.banco_id) {
-                const campoBanco = document.getElementById('t_banco');
-                campoBanco.value = cartaoSelt.banco_id;
-                campoBanco.classList.add('ring-2', 'ring-blue-500');
-                setTimeout(() => campoBanco.classList.remove('ring-2', 'ring-blue-500'), 1000);
-            }
+            const c = cartoes.find(x => x.id === cartaoId);
+            if (c && c.banco_id) document.getElementById('t_banco').value = c.banco_id;
         }
 
         function alternarFiltroParcelas() {
             filtroSomenteParcelados = !filtroSomenteParcelados;
             const btn = document.getElementById('btnFiltroParcelas');
-            const indicador = document.getElementById('indicadorFiltro');
-            if(filtroSomenteParcelados) {
-                btn.classList.add('border-orange-500', 'text-orange-600', 'bg-orange-50');
-                indicador.classList.replace('bg-slate-300', 'bg-orange-500');
-            } else {
-                btn.classList.remove('border-orange-500', 'text-orange-600', 'bg-orange-50');
-                indicador.classList.replace('bg-orange-500', 'bg-slate-300');
-            }
+            if(filtroSomenteParcelados) btn.classList.add('border-orange-500', 'text-orange-600', 'bg-orange-50');
+            else btn.classList.remove('border-orange-500', 'text-orange-600', 'bg-orange-50');
             if(idSelecionado) tipoSelecionado === 'banco' ? verDetalhesBanco(idSelecionado) : verDetalhesCartao(idSelecionado);
         }
 
@@ -305,14 +297,12 @@
             const modal = document.getElementById('modal');
             const corpo = document.getElementById('modalCorpo');
             const btn = document.getElementById('btnConfirmar');
-            const btnExcluir = document.getElementById('btnExcluirItem');
             modal.classList.replace('hidden', 'flex');
-            btnExcluir.classList.add('hidden');
 
             if(tipo === 'banco' || tipo === 'editar_banco') {
                 const b = id ? bancos.find(x => x.id === id) : null;
                 document.getElementById('modalTitulo').innerText = id ? "Editar Banco" : "Novo Banco";
-                corpo.innerHTML = `<label class="text-[10px] font-black text-slate-400 uppercase ml-2">Nome</label><input id="n_nome" value="${b?.nome || ''}" class="w-full border-2 p-4 rounded-xl outline-none"><label class="text-[10px] font-black text-slate-400 uppercase ml-2">Saldo Inicial</label><input id="n_saldo" type="number" value="${b?.saldo_inicial || ''}" class="w-full border-2 p-4 rounded-xl outline-none">`;
+                corpo.innerHTML = `<label class="text-[10px] font-black text-slate-400">Nome</label><input id="n_nome" value="${b?.nome || ''}" class="w-full border-2 p-3 rounded-xl"><label class="text-[10px] font-black text-slate-400">Saldo Inicial</label><input id="n_saldo" type="number" value="${b?.saldo_inicial || ''}" class="w-full border-2 p-3 rounded-xl">`;
                 btn.onclick = async () => {
                     const obj = { nome: document.getElementById('n_nome').value, saldo_inicial: document.getElementById('n_saldo').value || 0 };
                     id ? await _supabase.from('bancos').update(obj).eq('id', id) : await _supabase.from('bancos').insert(obj);
@@ -322,8 +312,8 @@
             else if(tipo === 'cartao' || tipo === 'editar_cartao') {
                 const c = id ? cartoes.find(x => x.id === id) : null;
                 document.getElementById('modalTitulo').innerText = id ? "Editar Cartão" : "Novo Cartão";
-                const options = bancos.map(b => `<option value="${b.id}" ${c?.banco_id === b.id ? 'selected' : ''}>${b.nome}</option>`).join('');
-                corpo.innerHTML = `<label class="text-[10px] font-black text-slate-400 uppercase ml-2">Nome</label><input id="n_nome_c" value="${c?.nome || ''}" class="w-full border-2 p-4 rounded-xl"><label class="text-[10px] font-black text-slate-400 uppercase ml-2">Dia Vencimento</label><input id="n_venc_c" type="number" value="${c?.dia_vencimento || 10}" class="w-full border-2 p-4 rounded-xl"><label class="text-[10px] font-black text-slate-400 uppercase ml-2">Banco</label><select id="n_banco_c" class="w-full border-2 p-4 rounded-xl outline-none">${options}</select>`;
+                const bts = bancos.map(b => `<option value="${b.id}" ${c?.banco_id === b.id ? 'selected' : ''}>${b.nome}</option>`).join('');
+                corpo.innerHTML = `<label class="text-[10px] font-black text-slate-400">Nome</label><input id="n_nome_c" value="${c?.nome || ''}" class="w-full border-2 p-3 rounded-xl"><label class="text-[10px] font-black text-slate-400">Vencimento</label><input id="n_venc_c" type="number" value="${c?.dia_vencimento || 10}" class="w-full border-2 p-3 rounded-xl"><label class="text-[10px] font-black text-slate-400">Banco</label><select id="n_banco_c" class="w-full border-2 p-3 rounded-xl">${bts}</select>`;
                 btn.onclick = async () => {
                     const obj = { nome: document.getElementById('n_nome_c').value, dia_vencimento: document.getElementById('n_venc_c').value, banco_id: document.getElementById('n_banco_c').value };
                     id ? await _supabase.from('cartoes').update(obj).eq('id', id) : await _supabase.from('cartoes').insert(obj);
@@ -333,27 +323,25 @@
             else if(tipo === 'transacao' || tipo === 'editar_transacao') {
                 const t = id ? transacoes.find(x => x.id === id) : null;
                 document.getElementById('modalTitulo').innerText = id ? "Editar Gasto" : "Lançar Gasto";
-                const optCartao = `<option value="">Dinheiro / Débito</option>` + cartoes.map(c => `<option value="${c.id}" ${t?.cartao_id === c.id ? 'selected' : ''}>${c.nome}</option>`).join('');
-                const optBanco = bancos.map(b => `<option value="${b.id}" ${t?.banco_id === b.id ? 'selected' : ''}>${b.nome}</option>`).join('');
+                const cts = `<option value="">Débito</option>` + cartoes.map(c => `<option value="${c.id}" ${t?.cartao_id === c.id ? 'selected' : ''}>${c.nome}</option>`).join('');
+                const bks = bancos.map(b => `<option value="${b.id}" ${t?.banco_id === b.id ? 'selected' : ''}>${b.nome}</option>`).join('');
                 corpo.innerHTML = `
-                    <input id="t_desc" value="${t?.descricao || ''}" placeholder="Descrição" class="w-full border-2 p-4 rounded-xl outline-none">
-                    <input id="t_val" type="number" step="0.01" value="${t?.valor || ''}" placeholder="Valor R$" class="w-full border-2 p-4 rounded-xl outline-none">
-                    <input id="t_data" type="date" value="${t?.data_transacao || new Date().toISOString().split('T')[0]}" class="w-full border-2 p-4 rounded-xl outline-none">
-                    <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Cartão</label>
-                    <select id="t_cartao" onchange="autoSelecionarBanco(this.value)" class="w-full border-2 p-4 rounded-xl bg-purple-50 outline-none">${optCartao}</select>
-                    <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Banco</label>
-                    <select id="t_banco" class="w-full border-2 p-4 rounded-xl bg-blue-50 outline-none">${optBanco}</select>
-                    ${!id ? `<label class="text-[10px] font-black text-slate-400 uppercase ml-2">Parcelas</label><input id="t_parc" type="number" min="1" value="1" class="w-full border-2 p-4 rounded-xl outline-none">` : ''}
+                    <input id="t_desc" value="${t?.descricao || ''}" placeholder="Descrição" class="w-full border-2 p-3 rounded-xl">
+                    <input id="t_val" type="number" step="0.01" value="${t?.valor || ''}" placeholder="Valor" class="w-full border-2 p-3 rounded-xl">
+                    <input id="t_data" type="date" value="${t?.data_transacao || new Date().toISOString().split('T')[0]}" class="w-full border-2 p-3 rounded-xl">
+                    <label class="text-[10px] font-black text-slate-400">Cartão</label><select id="t_cartao" onchange="autoSelecionarBanco(this.value)" class="w-full border-2 p-3 rounded-xl bg-purple-50">${cts}</select>
+                    <label class="text-[10px] font-black text-slate-400">Banco</label><select id="t_banco" class="w-full border-2 p-3 rounded-xl bg-blue-50">${bks}</select>
+                    ${!id ? `<label class="text-[10px] font-black text-slate-400">Parcelas</label><input id="t_parc" type="number" min="1" value="1" class="w-full border-2 p-3 rounded-xl">` : ''}
                 `;
                 btn.onclick = async () => {
                     const obj = { descricao: document.getElementById('t_desc').value, valor: parseFloat(document.getElementById('t_val').value), data_transacao: document.getElementById('t_data').value, banco_id: document.getElementById('t_banco').value, cartao_id: document.getElementById('t_cartao').value || null };
                     if(id) await _supabase.from('transacoes').update(obj).eq('id', id);
                     else {
-                        const parc = parseInt(document.getElementById('t_parc').value) || 1;
+                        const p = parseInt(document.getElementById('t_parc').value) || 1;
                         const ins = [];
-                        for(let i=0; i<parc; i++) {
+                        for(let i=0; i<p; i++) {
                             let d = new Date(obj.data_transacao + 'T15:00:00'); d.setMonth(d.getMonth() + i);
-                            ins.push({ ...obj, valor: obj.valor/parc, data_transacao: d.toISOString().split('T')[0], parcela_atual: i+1, total_parcelas: parc });
+                            ins.push({ ...obj, valor: obj.valor/p, data_transacao: d.toISOString().split('T')[0], parcela_atual: i+1, total_parcelas: p });
                         }
                         await _supabase.from('transacoes').insert(ins);
                     }
