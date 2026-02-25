@@ -23,13 +23,14 @@ export default function Home() {
     const [cards, setCards] = useState<any[]>([]);
     const [categorias, setCategorias] = useState<any[]>([]);
     const [despesas, setDespesas] = useState<any[]>([]);
-    const [cardSelecionado, setCardSelecionado] = useState<string | null>(null);
 
     const [modalDespesa, setModalDespesa] = useState(false);
     const [modalCard, setModalCard] = useState(false);
     const [modalCategoria, setModalCategoria] = useState(false);
 
+    const [cardIdModal, setCardIdModal] = useState("");
     const [nomeCard, setNomeCard] = useState("");
+
     const [nomeCategoria, setNomeCategoria] = useState("");
     const [tipoCategoria, setTipoCategoria] = useState("normal");
 
@@ -55,6 +56,7 @@ export default function Home() {
     }
 
     async function criarCard() {
+        if (!nomeCard) return;
         await supabase.from("cards").insert({ nome: nomeCard });
         setNomeCard("");
         setModalCard(false);
@@ -62,6 +64,7 @@ export default function Home() {
     }
 
     async function criarCategoria() {
+        if (!nomeCategoria) return;
         await supabase.from("categorias").insert({
             nome: nomeCategoria,
             tipo: tipoCategoria,
@@ -72,20 +75,23 @@ export default function Home() {
     }
 
     async function salvarDespesa() {
-        if (!cardSelecionado) return alert("Selecione um cartão");
+        if (!cardIdModal) return alert("Selecione um cartão");
+        if (!categoriaId) return alert("Selecione uma categoria");
 
         const valorNumero = parseFloat(valor);
         const grupo = uuidv4();
 
         if (parcelado && parcelas > 1) {
+            const valorParcela = valorNumero / parcelas;
+
             for (let i = 0; i < parcelas; i++) {
                 const novaData = new Date(ano, mes - 1 + i, 1);
 
                 await supabase.from("despesas").insert({
                     descricao,
-                    valor: valorNumero / parcelas,
+                    valor: valorParcela,
                     categoria_id: categoriaId,
-                    card_id: cardSelecionado,
+                    card_id: cardIdModal,
                     tipo,
                     parcelado: true,
                     grupo_parcela: grupo,
@@ -101,7 +107,7 @@ export default function Home() {
                 descricao,
                 valor: valorNumero,
                 categoria_id: categoriaId,
-                card_id: cardSelecionado,
+                card_id: cardIdModal,
                 tipo,
                 parcelado: false,
                 mes,
@@ -115,17 +121,53 @@ export default function Home() {
         setValor("");
         setParcelado(false);
         setParcelas(1);
+        setCardIdModal("");
+        carregar();
+    }
+
+    async function excluirInteligente(despesa: any, modo: string) {
+        if (!despesa.grupo_parcela) {
+            await supabase.from("despesas").delete().eq("id", despesa.id);
+        } else {
+            if (modo === "uma") {
+                await supabase.from("despesas").delete().eq("id", despesa.id);
+            }
+
+            if (modo === "futuras") {
+                await supabase
+                    .from("despesas")
+                    .delete()
+                    .eq("grupo_parcela", despesa.grupo_parcela)
+                    .gte("numero_parcela", despesa.numero_parcela);
+            }
+
+            if (modo === "todas") {
+                await supabase
+                    .from("despesas")
+                    .delete()
+                    .eq("grupo_parcela", despesa.grupo_parcela);
+            }
+        }
+
         carregar();
     }
 
     const despesasFiltradas = despesas.filter(
-        (d) => d.card_id === cardSelecionado && d.mes === mes && d.ano === ano,
+        (d) => d.mes === mes && d.ano === ano,
     );
 
     const total = despesasFiltradas.reduce(
         (acc, d) => acc + Number(d.valor),
         0,
     );
+
+    const fixas = despesasFiltradas
+        .filter((d) => d.tipo === "fixa")
+        .reduce((acc, d) => acc + Number(d.valor), 0);
+
+    const parceladas = despesasFiltradas
+        .filter((d) => d.parcelado)
+        .reduce((acc, d) => acc + Number(d.valor), 0);
 
     const resumoAnual = Array.from({ length: 12 }, (_, i) => {
         const mesNum = i + 1;
@@ -145,12 +187,7 @@ export default function Home() {
                 {cards.map((card) => (
                     <div
                         key={card.id}
-                        onClick={() => setCardSelecionado(card.id)}
-                        className={`p-3 rounded mb-2 cursor-pointer ${
-                            cardSelecionado === card.id
-                                ? "bg-white text-purple-800"
-                                : "bg-purple-700"
-                        }`}
+                        className="p-2 bg-purple-700 rounded mb-2"
                     >
                         {card.nome}
                     </div>
@@ -192,10 +229,61 @@ export default function Home() {
                     />
                 </div>
 
-                <div className="bg-white p-4 rounded shadow mb-6">
-                    Total: R$ {total.toFixed(2)}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-white p-4 rounded shadow">
+                        Total: R$ {total.toFixed(2)}
+                    </div>
+                    <div className="bg-white p-4 rounded shadow">
+                        Fixas: R$ {fixas.toFixed(2)}
+                    </div>
+                    <div className="bg-white p-4 rounded shadow">
+                        Parceladas: R$ {parceladas.toFixed(2)}
+                    </div>
                 </div>
 
+                {/* Lista */}
+                <div className="bg-white p-4 rounded shadow mb-8">
+                    {despesasFiltradas.map((d) => (
+                        <div
+                            key={d.id}
+                            className="flex justify-between border-b py-2"
+                        >
+                            <div>
+                                {d.descricao}
+                                {d.parcelado && (
+                                    <span className="text-sm text-gray-500 ml-2">
+                                        ({d.numero_parcela}/{d.total_parcelas})
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="flex gap-2">
+                                R$ {Number(d.valor).toFixed(2)}
+                                <button
+                                    onClick={() => excluirInteligente(d, "uma")}
+                                >
+                                    ❌
+                                </button>
+                                <button
+                                    onClick={() =>
+                                        excluirInteligente(d, "futuras")
+                                    }
+                                >
+                                    ⏭
+                                </button>
+                                <button
+                                    onClick={() =>
+                                        excluirInteligente(d, "todas")
+                                    }
+                                >
+                                    🗑
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Dashboard */}
                 <div className="bg-white p-6 rounded shadow h-80">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={resumoAnual}>
@@ -219,33 +307,43 @@ export default function Home() {
             {/* Modal Despesa */}
             {modalDespesa && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-xl w-96">
-                        <h2 className="font-bold mb-4 text-lg">Nova Despesa</h2>
+                    <div className="bg-white p-6 rounded w-96">
+                        <h2 className="font-bold mb-4">Nova Despesa</h2>
 
-                        {/* Descrição */}
+                        <select
+                            className="w-full border p-2 mb-2"
+                            value={cardIdModal}
+                            onChange={(e) => setCardIdModal(e.target.value)}
+                        >
+                            <option value="">Selecione o cartão</option>
+                            {cards.map((card) => (
+                                <option key={card.id} value={card.id}>
+                                    {card.nome}
+                                </option>
+                            ))}
+                        </select>
+
                         <input
                             placeholder="Descrição"
-                            className="w-full border p-2 mb-3 rounded"
+                            className="w-full border p-2 mb-2"
                             value={descricao}
                             onChange={(e) => setDescricao(e.target.value)}
                         />
 
-                        {/* Valor */}
                         <input
                             type="number"
                             placeholder="Valor"
-                            className="w-full border p-2 mb-3 rounded"
+                            className="w-full border p-2 mb-2"
                             value={valor}
                             onChange={(e) => setValor(e.target.value)}
                         />
 
-                        {/* Categoria */}
                         <select
-                            className="w-full border p-2 mb-3 rounded"
+                            className="w-full border p-2 mb-2"
                             value={categoriaId}
                             onChange={(e) => setCategoriaId(e.target.value)}
                         >
-                            <option value="">Selecione a categoria</option>
+                            <option value="">Categoria</option>
                             {categorias.map((c) => (
                                 <option key={c.id} value={c.id}>
                                     {c.nome}
@@ -253,31 +351,29 @@ export default function Home() {
                             ))}
                         </select>
 
-                        {/* Tipo da despesa */}
                         <select
-                            className="w-full border p-2 mb-3 rounded"
+                            className="w-full border p-2 mb-2"
                             value={tipo}
                             onChange={(e) => setTipo(e.target.value)}
                         >
-                            <option value="normal">Despesa Normal</option>
-                            <option value="fixa">Despesa Fixa</option>
+                            <option value="normal">Normal</option>
+                            <option value="fixa">Fixa</option>
                         </select>
 
-                        {/* Parcelado */}
-                        <div className="flex items-center gap-2 mb-3">
+                        <div className="flex items-center gap-2 mb-2">
                             <input
                                 type="checkbox"
                                 checked={parcelado}
                                 onChange={(e) => setParcelado(e.target.checked)}
                             />
-                            <label>Parcelado</label>
+                            Parcelado
                         </div>
 
                         {parcelado && (
                             <input
                                 type="number"
-                                placeholder="Número de parcelas"
-                                className="w-full border p-2 mb-3 rounded"
+                                placeholder="Parcelas"
+                                className="w-full border p-2 mb-2"
                                 value={parcelas}
                                 onChange={(e) =>
                                     setParcelas(Number(e.target.value))
@@ -287,7 +383,7 @@ export default function Home() {
 
                         <button
                             onClick={salvarDespesa}
-                            className="w-full bg-purple-600 text-white py-2 rounded mt-2"
+                            className="w-full bg-purple-600 text-white py-2 rounded"
                         >
                             Salvar
                         </button>
@@ -297,61 +393,6 @@ export default function Home() {
                             className="w-full mt-2 text-gray-500"
                         >
                             Cancelar
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Modal Card */}
-            {modalCard && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-                    <div className="bg-white p-6 rounded w-96">
-                        <h2 className="font-bold mb-4">Novo Cartão</h2>
-
-                        <input
-                            placeholder="Nome"
-                            className="w-full border p-2 mb-2"
-                            value={nomeCard}
-                            onChange={(e) => setNomeCard(e.target.value)}
-                        />
-
-                        <button
-                            onClick={criarCard}
-                            className="w-full bg-purple-600 text-white py-2 rounded"
-                        >
-                            Criar
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Modal Categoria */}
-            {modalCategoria && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-                    <div className="bg-white p-6 rounded w-96">
-                        <h2 className="font-bold mb-4">Nova Categoria</h2>
-
-                        <input
-                            placeholder="Nome"
-                            className="w-full border p-2 mb-2"
-                            value={nomeCategoria}
-                            onChange={(e) => setNomeCategoria(e.target.value)}
-                        />
-
-                        <select
-                            className="w-full border p-2 mb-2"
-                            value={tipoCategoria}
-                            onChange={(e) => setTipoCategoria(e.target.value)}
-                        >
-                            <option value="normal">Normal</option>
-                            <option value="fixa">Fixa</option>
-                        </select>
-
-                        <button
-                            onClick={criarCategoria}
-                            className="w-full bg-purple-600 text-white py-2 rounded"
-                        >
-                            Criar
                         </button>
                     </div>
                 </div>
