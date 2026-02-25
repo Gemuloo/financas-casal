@@ -25,7 +25,13 @@ export default function Home() {
     const [despesas, setDespesas] = useState<any[]>([]);
     const [cardSelecionado, setCardSelecionado] = useState<string | null>(null);
 
-    const [modal, setModal] = useState(false);
+    const [modalDespesa, setModalDespesa] = useState(false);
+    const [modalCard, setModalCard] = useState(false);
+    const [modalCategoria, setModalCategoria] = useState(false);
+
+    const [nomeCard, setNomeCard] = useState("");
+    const [nomeCategoria, setNomeCategoria] = useState("");
+    const [tipoCategoria, setTipoCategoria] = useState("normal");
 
     const [descricao, setDescricao] = useState("");
     const [valor, setValor] = useState("");
@@ -46,6 +52,23 @@ export default function Home() {
         setCards(cardsData || []);
         setCategorias(catData || []);
         setDespesas(despData || []);
+    }
+
+    async function criarCard() {
+        await supabase.from("cards").insert({ nome: nomeCard });
+        setNomeCard("");
+        setModalCard(false);
+        carregar();
+    }
+
+    async function criarCategoria() {
+        await supabase.from("categorias").insert({
+            nome: nomeCategoria,
+            tipo: tipoCategoria,
+        });
+        setNomeCategoria("");
+        setModalCategoria(false);
+        carregar();
     }
 
     async function salvarDespesa() {
@@ -87,39 +110,11 @@ export default function Home() {
             });
         }
 
-        setModal(false);
+        setModalDespesa(false);
         setDescricao("");
         setValor("");
         setParcelado(false);
         setParcelas(1);
-
-        carregar();
-    }
-
-    async function excluirInteligente(despesa: any, modo: string) {
-        if (!despesa.grupo_parcela) {
-            await supabase.from("despesas").delete().eq("id", despesa.id);
-        } else {
-            if (modo === "uma") {
-                await supabase.from("despesas").delete().eq("id", despesa.id);
-            }
-
-            if (modo === "futuras") {
-                await supabase
-                    .from("despesas")
-                    .delete()
-                    .eq("grupo_parcela", despesa.grupo_parcela)
-                    .gte("numero_parcela", despesa.numero_parcela);
-            }
-
-            if (modo === "todas") {
-                await supabase
-                    .from("despesas")
-                    .delete()
-                    .eq("grupo_parcela", despesa.grupo_parcela);
-            }
-        }
-
         carregar();
     }
 
@@ -131,13 +126,6 @@ export default function Home() {
         (acc, d) => acc + Number(d.valor),
         0,
     );
-    const fixas = despesasFiltradas
-        .filter((d) => d.tipo === "fixa")
-        .reduce((acc, d) => acc + Number(d.valor), 0);
-
-    const parceladas = despesasFiltradas
-        .filter((d) => d.parcelado)
-        .reduce((acc, d) => acc + Number(d.valor), 0);
 
     const resumoAnual = Array.from({ length: 12 }, (_, i) => {
         const mesNum = i + 1;
@@ -145,10 +133,7 @@ export default function Home() {
             .filter((d) => d.mes === mesNum && d.ano === ano)
             .reduce((acc, d) => acc + Number(d.valor), 0);
 
-        return {
-            mes: mesNum,
-            total: totalMes,
-        };
+        return { mes: mesNum, total: totalMes };
     });
 
     return (
@@ -156,6 +141,7 @@ export default function Home() {
             {/* Sidebar */}
             <div className="w-full md:w-72 bg-purple-800 text-white p-6">
                 <h2 className="text-xl font-bold mb-4">Cartões</h2>
+
                 {cards.map((card) => (
                     <div
                         key={card.id}
@@ -169,11 +155,25 @@ export default function Home() {
                         {card.nome}
                     </div>
                 ))}
+
+                <button
+                    onClick={() => setModalCard(true)}
+                    className="mt-4 bg-white text-purple-800 p-2 rounded w-full"
+                >
+                    + Novo Cartão
+                </button>
+
+                <button
+                    onClick={() => setModalCategoria(true)}
+                    className="mt-2 bg-white text-purple-800 p-2 rounded w-full"
+                >
+                    + Nova Categoria
+                </button>
             </div>
 
             {/* Conteúdo */}
             <div className="flex-1 p-6">
-                <div className="flex flex-wrap gap-4 mb-6">
+                <div className="flex gap-4 mb-6">
                     <select
                         value={mes}
                         onChange={(e) => setMes(Number(e.target.value))}
@@ -192,61 +192,10 @@ export default function Home() {
                     />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div className="bg-white p-4 rounded shadow">
-                        Total: R$ {total.toFixed(2)}
-                    </div>
-                    <div className="bg-white p-4 rounded shadow">
-                        Fixas: R$ {fixas.toFixed(2)}
-                    </div>
-                    <div className="bg-white p-4 rounded shadow">
-                        Parceladas: R$ {parceladas.toFixed(2)}
-                    </div>
+                <div className="bg-white p-4 rounded shadow mb-6">
+                    Total: R$ {total.toFixed(2)}
                 </div>
 
-                {/* Lista */}
-                <div className="bg-white p-4 rounded shadow mb-8">
-                    {despesasFiltradas.map((d) => (
-                        <div
-                            key={d.id}
-                            className="flex justify-between border-b py-2"
-                        >
-                            <div>
-                                {d.descricao}
-                                {d.parcelado && (
-                                    <span className="text-sm text-gray-500 ml-2">
-                                        ({d.numero_parcela}/{d.total_parcelas})
-                                    </span>
-                                )}
-                            </div>
-
-                            <div className="flex gap-2">
-                                R$ {Number(d.valor).toFixed(2)}
-                                <button
-                                    onClick={() => excluirInteligente(d, "uma")}
-                                >
-                                    ❌
-                                </button>
-                                <button
-                                    onClick={() =>
-                                        excluirInteligente(d, "futuras")
-                                    }
-                                >
-                                    ⏭
-                                </button>
-                                <button
-                                    onClick={() =>
-                                        excluirInteligente(d, "todas")
-                                    }
-                                >
-                                    🗑
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Dashboard gráfico */}
                 <div className="bg-white p-6 rounded shadow h-80">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={resumoAnual}>
@@ -261,13 +210,14 @@ export default function Home() {
 
             {/* Botão flutuante */}
             <button
-                onClick={() => setModal(true)}
+                onClick={() => setModalDespesa(true)}
                 className="fixed bottom-6 right-6 bg-purple-600 text-white w-16 h-16 rounded-full shadow-lg text-3xl"
             >
                 +
             </button>
 
-            {modal && (
+            {/* Modal Despesa */}
+            {modalDespesa && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
                     <div className="bg-white p-6 rounded w-96">
                         <h2 className="font-bold mb-4">Nova Despesa</h2>
@@ -300,36 +250,6 @@ export default function Home() {
                             ))}
                         </select>
 
-                        <select
-                            className="w-full border p-2 mb-2"
-                            value={tipo}
-                            onChange={(e) => setTipo(e.target.value)}
-                        >
-                            <option value="normal">Normal</option>
-                            <option value="fixa">Fixa</option>
-                        </select>
-
-                        <div className="flex items-center gap-2 mb-2">
-                            <input
-                                type="checkbox"
-                                checked={parcelado}
-                                onChange={(e) => setParcelado(e.target.checked)}
-                            />
-                            Parcelado
-                        </div>
-
-                        {parcelado && (
-                            <input
-                                type="number"
-                                placeholder="Parcelas"
-                                className="w-full border p-2 mb-2"
-                                value={parcelas}
-                                onChange={(e) =>
-                                    setParcelas(Number(e.target.value))
-                                }
-                            />
-                        )}
-
                         <button
                             onClick={salvarDespesa}
                             className="w-full bg-purple-600 text-white py-2 rounded"
@@ -338,10 +258,65 @@ export default function Home() {
                         </button>
 
                         <button
-                            onClick={() => setModal(false)}
+                            onClick={() => setModalDespesa(false)}
                             className="w-full mt-2 text-gray-500"
                         >
                             Cancelar
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Card */}
+            {modalCard && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+                    <div className="bg-white p-6 rounded w-96">
+                        <h2 className="font-bold mb-4">Novo Cartão</h2>
+
+                        <input
+                            placeholder="Nome"
+                            className="w-full border p-2 mb-2"
+                            value={nomeCard}
+                            onChange={(e) => setNomeCard(e.target.value)}
+                        />
+
+                        <button
+                            onClick={criarCard}
+                            className="w-full bg-purple-600 text-white py-2 rounded"
+                        >
+                            Criar
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Categoria */}
+            {modalCategoria && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+                    <div className="bg-white p-6 rounded w-96">
+                        <h2 className="font-bold mb-4">Nova Categoria</h2>
+
+                        <input
+                            placeholder="Nome"
+                            className="w-full border p-2 mb-2"
+                            value={nomeCategoria}
+                            onChange={(e) => setNomeCategoria(e.target.value)}
+                        />
+
+                        <select
+                            className="w-full border p-2 mb-2"
+                            value={tipoCategoria}
+                            onChange={(e) => setTipoCategoria(e.target.value)}
+                        >
+                            <option value="normal">Normal</option>
+                            <option value="fixa">Fixa</option>
+                        </select>
+
+                        <button
+                            onClick={criarCategoria}
+                            className="w-full bg-purple-600 text-white py-2 rounded"
+                        >
+                            Criar
                         </button>
                     </div>
                 </div>
