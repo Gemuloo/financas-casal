@@ -218,31 +218,34 @@ export default function Home() {
 
             {/* Modal Despesa */}
             {modalDespesa && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-                    <div className="bg-white p-6 rounded w-96">
-                        <h2 className="font-bold mb-4">Nova Despesa</h2>
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-xl w-96">
+                        <h2 className="font-bold mb-4 text-lg">Nova Despesa</h2>
 
+                        {/* Descrição */}
                         <input
                             placeholder="Descrição"
-                            className="w-full border p-2 mb-2"
+                            className="w-full border p-2 mb-3 rounded"
                             value={descricao}
                             onChange={(e) => setDescricao(e.target.value)}
                         />
 
+                        {/* Valor */}
                         <input
                             type="number"
                             placeholder="Valor"
-                            className="w-full border p-2 mb-2"
+                            className="w-full border p-2 mb-3 rounded"
                             value={valor}
                             onChange={(e) => setValor(e.target.value)}
                         />
 
+                        {/* Categoria */}
                         <select
-                            className="w-full border p-2 mb-2"
+                            className="w-full border p-2 mb-3 rounded"
                             value={categoriaId}
                             onChange={(e) => setCategoriaId(e.target.value)}
                         >
-                            <option value="">Categoria</option>
+                            <option value="">Selecione a categoria</option>
                             {categorias.map((c) => (
                                 <option key={c.id} value={c.id}>
                                     {c.nome}
@@ -250,9 +253,41 @@ export default function Home() {
                             ))}
                         </select>
 
+                        {/* Tipo da despesa */}
+                        <select
+                            className="w-full border p-2 mb-3 rounded"
+                            value={tipo}
+                            onChange={(e) => setTipo(e.target.value)}
+                        >
+                            <option value="normal">Despesa Normal</option>
+                            <option value="fixa">Despesa Fixa</option>
+                        </select>
+
+                        {/* Parcelado */}
+                        <div className="flex items-center gap-2 mb-3">
+                            <input
+                                type="checkbox"
+                                checked={parcelado}
+                                onChange={(e) => setParcelado(e.target.checked)}
+                            />
+                            <label>Parcelado</label>
+                        </div>
+
+                        {parcelado && (
+                            <input
+                                type="number"
+                                placeholder="Número de parcelas"
+                                className="w-full border p-2 mb-3 rounded"
+                                value={parcelas}
+                                onChange={(e) =>
+                                    setParcelas(Number(e.target.value))
+                                }
+                            />
+                        )}
+
                         <button
                             onClick={salvarDespesa}
-                            className="w-full bg-purple-600 text-white py-2 rounded"
+                            className="w-full bg-purple-600 text-white py-2 rounded mt-2"
                         >
                             Salvar
                         </button>
