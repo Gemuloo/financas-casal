@@ -40,7 +40,11 @@ export default function Home() {
 
                 <div className="mb-6">
                     <input
-                        className="w-full p-3 rounded-lg text-black mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm"
+                        className="w-full p-3 rounded-xl bg-white text-gray-900 mb-3 
+                                        border border-gray-200 shadow-sm
+                                        placeholder-gray-400
+                                        focus:outline-none focus:ring-2 focus:ring-purple-500 
+                                        transition-all"
                         placeholder="Nome do cartão"
                         value={nome}
                         onChange={(e) => setNome(e.target.value)}
