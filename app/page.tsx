@@ -1,65 +1,140 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    const [cards, setCards] = useState<any[]>([]);
+    const [nome, setNome] = useState("");
+    const [selecionado, setSelecionado] = useState<string | null>(null);
+    const [menuAberto, setMenuAberto] = useState(false);
+
+    async function carregarCards() {
+        const { data } = await supabase.from("cards").select("*");
+        setCards(data || []);
+    }
+
+    async function adicionarCard() {
+        if (!nome) return;
+
+        await supabase.from("cards").insert({
+            nome,
+            limite: 0,
+        });
+
+        setNome("");
+        carregarCards();
+    }
+
+    useEffect(() => {
+        carregarCards();
+    }, []);
+
+    return (
+        <div className="flex min-h-screen bg-gradient-to-br from-gray-100 to-gray-200">
+            {/* SIDEBAR */}
+            <div className="w-72 bg-gradient-to-b from-gray-900 to-gray-800 text-white p-6 shadow-xl">
+                <h2 className="text-2xl font-bold mb-6 tracking-wide">
+                    💳 Cartões
+                </h2>
+
+                <div className="mb-6">
+                    <input
+                        className="w-full p-3 rounded-lg text-black mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm"
+                        placeholder="Nome do cartão"
+                        value={nome}
+                        onChange={(e) => setNome(e.target.value)}
+                    />
+
+                    <button
+                        onClick={adicionarCard}
+                        className="w-full bg-purple-600 hover:bg-purple-700 transition-all duration-200 p-3 rounded-lg font-semibold shadow-md"
+                    >
+                        + Adicionar Cartão
+                    </button>
+                </div>
+
+                <div className="space-y-3">
+                    {cards.map((card) => (
+                        <div
+                            key={card.id}
+                            onClick={() => setSelecionado(card.id)}
+                            className={`p-3 rounded-xl cursor-pointer transition-all duration-200 ${
+                                selecionado === card.id
+                                    ? "bg-purple-600 shadow-lg"
+                                    : "bg-gray-700 hover:bg-gray-600"
+                            }`}
+                        >
+                            {card.nome}
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* CONTEÚDO PRINCIPAL */}
+            <div className="flex-1 p-10">
+                <h1 className="text-3xl font-bold mb-8">
+                    Resumo Financeiro 📊
+                </h1>
+
+                <div className="grid grid-cols-3 gap-6 mb-8">
+                    <div className="bg-white rounded-xl shadow-md p-6">
+                        <p className="text-gray-500 text-sm">Não Parceladas</p>
+                        <h2 className="text-2xl font-bold mt-2">R$ 0,00</h2>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-md p-6">
+                        <p className="text-gray-500 text-sm">Parceladas</p>
+                        <h2 className="text-2xl font-bold mt-2">R$ 0,00</h2>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-md p-6">
+                        <p className="text-gray-500 text-sm">Total</p>
+                        <h2 className="text-2xl font-bold mt-2">R$ 0,00</h2>
+                    </div>
+                </div>
+
+                <div className="bg-white shadow-md rounded-xl p-6">
+                    Aqui vai aparecer o resumo mensal e anual.
+                </div>
+            </div>
+
+            {/* BOTÃO FLUTUANTE */}
+            <button
+                onClick={() => setMenuAberto(true)}
+                className="fixed bottom-8 right-8 bg-purple-600 hover:bg-purple-700 
+                   text-white w-16 h-16 rounded-full shadow-2xl 
+                   flex items-center justify-center text-3xl 
+                   transition-all duration-300 hover:scale-110 z-50"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+                +
+            </button>
+
+            {/* MENU CENTRAL FLUTUANTE */}
+            {menuAberto && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-40">
+                    <div className="bg-white rounded-2xl shadow-2xl p-10 flex flex-col gap-6 animate-fadeIn">
+                        <button className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all">
+                            💰 Nova Despesa
+                        </button>
+
+                        <button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all">
+                            💳 Novo Cartão
+                        </button>
+
+                        <button className="bg-gray-800 hover:bg-gray-900 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all">
+                            📁 Nova Categoria
+                        </button>
+
+                        <button
+                            onClick={() => setMenuAberto(false)}
+                            className="text-gray-500 hover:text-gray-700 mt-4"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+    );
 }
