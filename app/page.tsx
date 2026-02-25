@@ -4,106 +4,79 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 export default function Home() {
-    const [cards, setCards] = useState<any[]>([]);
-    const [nome, setNome] = useState("");
-    const [selecionado, setSelecionado] = useState<string | null>(null);
     const [menuAberto, setMenuAberto] = useState(false);
+    const [modalDespesa, setModalDespesa] = useState(false);
+    const [categorias, setCategorias] = useState<any[]>([]);
 
-    async function carregarCards() {
-        const { data } = await supabase.from("cards").select("*");
-        setCards(data || []);
-    }
-
-    async function adicionarCard() {
-        if (!nome) return;
-
-        await supabase.from("cards").insert({
-            nome,
-            limite: 0,
-        });
-
-        setNome("");
-        carregarCards();
-    }
+    const [descricao, setDescricao] = useState("");
+    const [valor, setValor] = useState("");
+    const [categoriaId, setCategoriaId] = useState("");
+    const [tipo, setTipo] = useState("normal");
+    const [parcelado, setParcelado] = useState(false);
+    const [parcelas, setParcelas] = useState(1);
 
     useEffect(() => {
-        carregarCards();
+        buscarCategorias();
     }, []);
 
+    async function buscarCategorias() {
+        const { data } = await supabase.from("categorias").select("*");
+        if (data) setCategorias(data);
+    }
+
+    async function salvarDespesa() {
+        if (!descricao || !valor || !categoriaId) {
+            alert("Preencha todos os campos");
+            return;
+        }
+
+        const valorNumero = parseFloat(valor);
+
+        if (parcelado && parcelas > 1) {
+            for (let i = 1; i <= parcelas; i++) {
+                await supabase.from("despesas").insert({
+                    descricao,
+                    valor: valorNumero / parcelas,
+                    categoria_id: categoriaId,
+                    tipo,
+                    parcela_atual: i,
+                    total_parcelas: parcelas,
+                });
+            }
+        } else {
+            await supabase.from("despesas").insert({
+                descricao,
+                valor: valorNumero,
+                categoria_id: categoriaId,
+                tipo,
+                parcela_atual: 1,
+                total_parcelas: 1,
+            });
+        }
+
+        alert("Despesa salva!");
+        setModalDespesa(false);
+        setDescricao("");
+        setValor("");
+        setParcelado(false);
+        setParcelas(1);
+    }
+
     return (
-        <div className="flex min-h-screen bg-gradient-to-br from-gray-100 to-gray-200">
-            {/* SIDEBAR */}
-            <div className="w-72 bg-gradient-to-b from-gray-900 to-gray-800 text-white p-6 shadow-xl">
-                <h2 className="text-2xl font-bold mb-6 tracking-wide">
-                    💳 Cartões
-                </h2>
-
-                <div className="mb-6">
-                    <input
-                        className="w-full p-3 rounded-xl bg-white text-gray-900 mb-3 
-                                        border border-gray-200 shadow-sm
-                                        placeholder-gray-400
-                                        focus:outline-none focus:ring-2 focus:ring-purple-500 
-                                        transition-all"
-                        placeholder="Nome do cartão"
-                        value={nome}
-                        onChange={(e) => setNome(e.target.value)}
-                    />
-
-                    <button
-                        onClick={adicionarCard}
-                        className="w-full bg-purple-600 hover:bg-purple-700 transition-all duration-200 p-3 rounded-lg font-semibold shadow-md"
-                    >
-                        + Adicionar Cartão
-                    </button>
-                </div>
-
-                <div className="space-y-3">
-                    {cards.map((card) => (
-                        <div
-                            key={card.id}
-                            onClick={() => setSelecionado(card.id)}
-                            className={`p-3 rounded-xl cursor-pointer transition-all duration-200 ${
-                                selecionado === card.id
-                                    ? "bg-purple-600 shadow-lg"
-                                    : "bg-gray-700 hover:bg-gray-600"
-                            }`}
-                        >
-                            {card.nome}
-                        </div>
-                    ))}
-                </div>
+        <div className="min-h-screen bg-gray-100 flex">
+            {/* Sidebar */}
+            <div className="w-72 bg-gradient-to-b from-purple-900 to-purple-700 text-white p-6">
+                <h2 className="text-2xl font-bold mb-6">💳 Cartões</h2>
             </div>
 
-            {/* CONTEÚDO PRINCIPAL */}
+            {/* Conteúdo */}
             <div className="flex-1 p-10">
-                <h1 className="text-3xl font-bold mb-8">
+                <h1 className="text-3xl font-bold mb-6">
                     Resumo Financeiro 📊
                 </h1>
-
-                <div className="grid grid-cols-3 gap-6 mb-8">
-                    <div className="bg-white rounded-xl shadow-md p-6">
-                        <p className="text-gray-500 text-sm">Não Parceladas</p>
-                        <h2 className="text-2xl font-bold mt-2">R$ 0,00</h2>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-md p-6">
-                        <p className="text-gray-500 text-sm">Parceladas</p>
-                        <h2 className="text-2xl font-bold mt-2">R$ 0,00</h2>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-md p-6">
-                        <p className="text-gray-500 text-sm">Total</p>
-                        <h2 className="text-2xl font-bold mt-2">R$ 0,00</h2>
-                    </div>
-                </div>
-
-                <div className="bg-white shadow-md rounded-xl p-6">
-                    Aqui vai aparecer o resumo mensal e anual.
-                </div>
             </div>
 
-            {/* BOTÃO FLUTUANTE */}
+            {/* Botão flutuante */}
             <button
                 onClick={() => setMenuAberto(true)}
                 className="fixed bottom-8 right-8 bg-purple-600 hover:bg-purple-700 
@@ -114,25 +87,104 @@ export default function Home() {
                 +
             </button>
 
-            {/* MENU CENTRAL FLUTUANTE */}
+            {/* Menu central */}
             {menuAberto && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-40">
                     <div className="bg-white rounded-2xl shadow-2xl p-10 flex flex-col gap-6 animate-fadeIn">
-                        <button className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all">
+                        <button
+                            onClick={() => {
+                                setMenuAberto(false);
+                                setModalDespesa(true);
+                            }}
+                            className="bg-purple-600 text-white px-8 py-4 rounded-xl text-lg font-semibold"
+                        >
                             💰 Nova Despesa
-                        </button>
-
-                        <button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all">
-                            💳 Novo Cartão
-                        </button>
-
-                        <button className="bg-gray-800 hover:bg-gray-900 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all">
-                            📁 Nova Categoria
                         </button>
 
                         <button
                             onClick={() => setMenuAberto(false)}
-                            className="text-gray-500 hover:text-gray-700 mt-4"
+                            className="text-gray-500 mt-4"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Despesa */}
+            {modalDespesa && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl shadow-2xl p-8 w-96 animate-fadeIn">
+                        <h2 className="text-xl font-bold mb-4">Nova Despesa</h2>
+
+                        <input
+                            placeholder="Descrição"
+                            className="w-full p-3 mb-3 border rounded-lg"
+                            value={descricao}
+                            onChange={(e) => setDescricao(e.target.value)}
+                        />
+
+                        <input
+                            type="number"
+                            placeholder="Valor"
+                            className="w-full p-3 mb-3 border rounded-lg"
+                            value={valor}
+                            onChange={(e) => setValor(e.target.value)}
+                        />
+
+                        <select
+                            className="w-full p-3 mb-3 border rounded-lg"
+                            value={categoriaId}
+                            onChange={(e) => setCategoriaId(e.target.value)}
+                        >
+                            <option value="">Selecione a categoria</option>
+                            {categorias.map((cat) => (
+                                <option key={cat.id} value={cat.id}>
+                                    {cat.nome}
+                                </option>
+                            ))}
+                        </select>
+
+                        <select
+                            className="w-full p-3 mb-3 border rounded-lg"
+                            value={tipo}
+                            onChange={(e) => setTipo(e.target.value)}
+                        >
+                            <option value="normal">Despesa Normal</option>
+                            <option value="fixa">Despesa Fixa</option>
+                        </select>
+
+                        <div className="flex items-center gap-2 mb-3">
+                            <input
+                                type="checkbox"
+                                checked={parcelado}
+                                onChange={(e) => setParcelado(e.target.checked)}
+                            />
+                            <label>Parcelado?</label>
+                        </div>
+
+                        {parcelado && (
+                            <input
+                                type="number"
+                                placeholder="Número de parcelas"
+                                className="w-full p-3 mb-3 border rounded-lg"
+                                value={parcelas}
+                                onChange={(e) =>
+                                    setParcelas(parseInt(e.target.value))
+                                }
+                            />
+                        )}
+
+                        <button
+                            onClick={salvarDespesa}
+                            className="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold mt-3"
+                        >
+                            Salvar
+                        </button>
+
+                        <button
+                            onClick={() => setModalDespesa(false)}
+                            className="w-full text-gray-500 mt-3"
                         >
                             Cancelar
                         </button>
