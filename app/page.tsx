@@ -60,9 +60,14 @@ export default function Home() {
         carregar();
     }, []);
 
-    async function carregar() {
-        console.log("Carregando dados...");
+    // 🔥 Corrige hydration: seleciona automaticamente o primeiro cartão
+    useEffect(() => {
+        if (cards.length > 0 && !cardSelecionado) {
+            setCardSelecionado(cards[0].id);
+        }
+    }, [cards]);
 
+    async function carregar() {
         const { data: c } = await supabase.from("cards").select("*");
         const { data: cat } = await supabase.from("categorias").select("*");
         const { data: d } = await supabase.from("despesas").select("*");
@@ -139,18 +144,15 @@ export default function Home() {
         carregar();
     }
 
-    // 🔥 FILTROS
-
+    // 🔥 Filtro seguro
     const despesasMes = despesas.filter(
         (d) =>
             d.mes === mes &&
             d.ano === ano &&
-            (modoResumo ? true : d.card_id === cardSelecionado),
+            (modoResumo || d.card_id === cardSelecionado),
     );
 
     const totalMes = despesasMes.reduce((acc, d) => acc + Number(d.valor), 0);
-
-    // 📊 DASHBOARD ANUAL (SOMA TODOS OS CARTÕES)
 
     const resumoAnual = Array.from({ length: 12 }, (_, i) => {
         const total = despesas
@@ -234,6 +236,12 @@ export default function Home() {
                                 <Bar dataKey="total" fill="#7c3aed" />
                             </BarChart>
                         </ResponsiveContainer>
+                    </div>
+                )}
+
+                {!cardSelecionado && !modoResumo && (
+                    <div className="text-gray-500">
+                        Nenhum cartão cadastrado ainda.
                     </div>
                 )}
             </div>
