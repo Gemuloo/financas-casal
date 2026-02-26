@@ -61,6 +61,8 @@ export default function Home() {
     }, []);
 
     async function carregar() {
+        console.log("Carregando dados...");
+
         const { data: c } = await supabase.from("cards").select("*");
         const { data: cat } = await supabase.from("categorias").select("*");
         const { data: d } = await supabase.from("despesas").select("*");
