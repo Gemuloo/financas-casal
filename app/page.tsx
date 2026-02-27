@@ -3,14 +3,12 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { v4 as uuidv4 } from "uuid";
-import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    Tooltip,
-    ResponsiveContainer,
-} from "recharts";
+
+import Sidebar from "@/components/Sidebar";
+import Dashboard from "@/components/Dashboard";
+import ModalCartao from "@/components/ModalCartao";
+import ModalCategoria from "@/components/ModalCategoria";
+import ModalDespesa from "@/components/ModalDespesa";
 
 const nomesMeses = [
     "Janeiro",
@@ -41,7 +39,7 @@ export default function Home() {
     const [modoResumo, setModoResumo] = useState(false);
 
     const [modalDespesa, setModalDespesa] = useState(false);
-    const [modalCard, setModalCard] = useState(false);
+    const [modalCartao, setModalCartao] = useState(false);
     const [modalCategoria, setModalCategoria] = useState(false);
 
     const [descricao, setDescricao] = useState("");
@@ -75,11 +73,11 @@ export default function Home() {
         setDespesas(d || []);
     }
 
-    async function criarCard() {
+    async function criarCartao() {
         if (!nomeCard) return;
         await supabase.from("cards").insert({ nome: nomeCard });
         setNomeCard("");
-        setModalCard(false);
+        setModalCartao(false);
         carregar();
     }
 
@@ -146,6 +144,7 @@ export default function Home() {
         setValor("");
         setParcelado(false);
         setParcelas(1);
+
         carregar();
     }
 
@@ -166,47 +165,18 @@ export default function Home() {
     });
 
     return (
-        <div className="min-h-screen bg-gray-100 flex">
-            {/* Sidebar */}
-            <div className="w-64 bg-purple-800 text-white p-6">
-                <h2 className="font-bold mb-4">Cartões</h2>
+        <div className="flex min-h-screen bg-gray-100">
+            <Sidebar
+                cards={cards}
+                selecionarCard={(id) => {
+                    setCardSelecionado(id);
+                    setModoResumo(false);
+                }}
+                abrirResumo={() => setModoResumo(true)}
+                abrirModalCartao={() => setModalCartao(true)}
+                abrirModalCategoria={() => setModalCategoria(true)}
+            />
 
-                {cards.map((card) => (
-                    <div
-                        key={card.id}
-                        onClick={() => {
-                            setCardSelecionado(card.id);
-                            setModoResumo(false);
-                        }}
-                        className="cursor-pointer p-2 bg-purple-700 rounded mb-2"
-                    >
-                        {card.nome}
-                    </div>
-                ))}
-
-                <button
-                    onClick={() => setModoResumo(true)}
-                    className="mt-4 w-full bg-white text-purple-800 p-2 rounded"
-                >
-                    📊 Resumo Geral
-                </button>
-
-                <button
-                    onClick={() => setModalCard(true)}
-                    className="mt-2 w-full bg-white text-purple-800 p-2 rounded"
-                >
-                    + Cartão
-                </button>
-
-                <button
-                    onClick={() => setModalCategoria(true)}
-                    className="mt-2 w-full bg-white text-purple-800 p-2 rounded"
-                >
-                    + Categoria
-                </button>
-            </div>
-
-            {/* Conteúdo */}
             <div className="flex-1 p-6">
                 {/* Seletor mês/ano */}
                 <div className="flex gap-4 mb-6 items-center">
@@ -251,27 +221,55 @@ export default function Home() {
                     </>
                 )}
 
-                {modoResumo && (
-                    <div className="bg-white p-6 rounded shadow h-96">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={resumoAnual}>
-                                <XAxis dataKey="mes" />
-                                <YAxis />
-                                <Tooltip />
-                                <Bar dataKey="total" fill="#7c3aed" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                )}
+                {modoResumo && <Dashboard resumoAnual={resumoAnual} />}
             </div>
 
             {/* Botão flutuante */}
             <button
                 onClick={() => setModalDespesa(true)}
-                className="fixed bottom-6 right-6 bg-purple-600 text-white w-16 h-16 rounded-full text-3xl"
+                className="fixed bottom-6 right-6 bg-purple-600 text-white w-16 h-16 rounded-full text-3xl shadow-lg"
             >
                 +
             </button>
+
+            {/* Modais */}
+            <ModalCartao
+                aberto={modalCartao}
+                fechar={() => setModalCartao(false)}
+                nomeCard={nomeCard}
+                setNomeCard={setNomeCard}
+                salvar={criarCartao}
+            />
+
+            <ModalCategoria
+                aberto={modalCategoria}
+                fechar={() => setModalCategoria(false)}
+                nomeCategoria={nomeCategoria}
+                setNomeCategoria={setNomeCategoria}
+                salvar={criarCategoria}
+            />
+
+            <ModalDespesa
+                aberto={modalDespesa}
+                fechar={() => setModalDespesa(false)}
+                salvar={salvarDespesa}
+                cards={cards}
+                categorias={categorias}
+                descricao={descricao}
+                setDescricao={setDescricao}
+                valor={valor}
+                setValor={setValor}
+                categoriaId={categoriaId}
+                setCategoriaId={setCategoriaId}
+                cardId={cardIdModal}
+                setCardId={setCardIdModal}
+                tipo={tipo}
+                setTipo={setTipo}
+                parcelado={parcelado}
+                setParcelado={setParcelado}
+                parcelas={parcelas}
+                setParcelas={setParcelas}
+            />
         </div>
     );
 }
