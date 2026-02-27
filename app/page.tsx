@@ -60,7 +60,6 @@ export default function Home() {
         carregar();
     }, []);
 
-    // 🔥 Corrige hydration: seleciona automaticamente o primeiro cartão
     useEffect(() => {
         if (cards.length > 0 && !cardSelecionado) {
             setCardSelecionado(cards[0].id);
@@ -141,10 +140,13 @@ export default function Home() {
         }
 
         setModalDespesa(false);
+        setDescricao("");
+        setValor("");
+        setParcelado(false);
+        setParcelas(1);
         carregar();
     }
 
-    // 🔥 Filtro seguro
     const despesasMes = despesas.filter(
         (d) =>
             d.mes === mes &&
@@ -238,21 +240,179 @@ export default function Home() {
                         </ResponsiveContainer>
                     </div>
                 )}
-
-                {!cardSelecionado && !modoResumo && (
-                    <div className="text-gray-500">
-                        Nenhum cartão cadastrado ainda.
-                    </div>
-                )}
             </div>
 
-            {/* Botão flutuante */}
+            {/* BOTÃO FLUTUANTE */}
             <button
                 onClick={() => setModalDespesa(true)}
                 className="fixed bottom-6 right-6 bg-purple-600 text-white w-16 h-16 rounded-full text-3xl"
             >
                 +
             </button>
+
+            {/* MODAIS */}
+            {/* Modal Cartão */}
+            {modalCard && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-xl w-80">
+                        <h2 className="font-bold mb-4">Novo Cartão</h2>
+
+                        <input
+                            placeholder="Nome do cartão"
+                            className="w-full border p-2 mb-3 rounded"
+                            value={nomeCard}
+                            onChange={(e) => setNomeCard(e.target.value)}
+                        />
+
+                        <button
+                            onClick={criarCard}
+                            className="w-full bg-purple-600 text-white py-2 rounded"
+                        >
+                            Salvar
+                        </button>
+
+                        <button
+                            onClick={() => setModalCard(false)}
+                            className="w-full mt-2 text-gray-500"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Categoria */}
+            {modalCategoria && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-xl w-80">
+                        <h2 className="font-bold mb-4">Nova Categoria</h2>
+
+                        <input
+                            placeholder="Nome da categoria"
+                            className="w-full border p-2 mb-3 rounded"
+                            value={nomeCategoria}
+                            onChange={(e) => setNomeCategoria(e.target.value)}
+                        />
+
+                        <select
+                            className="w-full border p-2 mb-3 rounded"
+                            value={tipoCategoria}
+                            onChange={(e) => setTipoCategoria(e.target.value)}
+                        >
+                            <option value="normal">Normal</option>
+                            <option value="fixa">Fixa</option>
+                        </select>
+
+                        <button
+                            onClick={criarCategoria}
+                            className="w-full bg-purple-600 text-white py-2 rounded"
+                        >
+                            Salvar
+                        </button>
+
+                        <button
+                            onClick={() => setModalCategoria(false)}
+                            className="w-full mt-2 text-gray-500"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Despesa */}
+            {modalDespesa && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-xl w-96">
+                        <h2 className="font-bold mb-4">Nova Despesa</h2>
+
+                        <input
+                            placeholder="Descrição"
+                            className="w-full border p-2 mb-3 rounded"
+                            value={descricao}
+                            onChange={(e) => setDescricao(e.target.value)}
+                        />
+
+                        <input
+                            type="number"
+                            placeholder="Valor"
+                            className="w-full border p-2 mb-3 rounded"
+                            value={valor}
+                            onChange={(e) => setValor(e.target.value)}
+                        />
+
+                        <select
+                            className="w-full border p-2 mb-3 rounded"
+                            value={cardIdModal}
+                            onChange={(e) => setCardIdModal(e.target.value)}
+                        >
+                            <option value="">Selecione o cartão</option>
+                            {cards.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                    {c.nome}
+                                </option>
+                            ))}
+                        </select>
+
+                        <select
+                            className="w-full border p-2 mb-3 rounded"
+                            value={categoriaId}
+                            onChange={(e) => setCategoriaId(e.target.value)}
+                        >
+                            <option value="">Selecione a categoria</option>
+                            {categorias.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                    {c.nome}
+                                </option>
+                            ))}
+                        </select>
+
+                        <select
+                            className="w-full border p-2 mb-3 rounded"
+                            value={tipo}
+                            onChange={(e) => setTipo(e.target.value)}
+                        >
+                            <option value="normal">Normal</option>
+                            <option value="fixa">Fixa</option>
+                        </select>
+
+                        <div className="flex items-center gap-2 mb-3">
+                            <input
+                                type="checkbox"
+                                checked={parcelado}
+                                onChange={(e) => setParcelado(e.target.checked)}
+                            />
+                            <label>Parcelado</label>
+                        </div>
+
+                        {parcelado && (
+                            <input
+                                type="number"
+                                placeholder="Número de parcelas"
+                                className="w-full border p-2 mb-3 rounded"
+                                value={parcelas}
+                                onChange={(e) =>
+                                    setParcelas(Number(e.target.value))
+                                }
+                            />
+                        )}
+
+                        <button
+                            onClick={salvarDespesa}
+                            className="w-full bg-purple-600 text-white py-2 rounded"
+                        >
+                            Salvar
+                        </button>
+
+                        <button
+                            onClick={() => setModalDespesa(false)}
+                            className="w-full mt-2 text-gray-500"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
