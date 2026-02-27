@@ -54,7 +54,6 @@ export default function Home() {
 
     const [nomeCard, setNomeCard] = useState("");
     const [nomeCategoria, setNomeCategoria] = useState("");
-    const [tipoCategoria, setTipoCategoria] = useState("normal");
 
     useEffect(() => {
         carregar();
@@ -86,10 +85,11 @@ export default function Home() {
 
     async function criarCategoria() {
         if (!nomeCategoria) return;
+
         await supabase.from("categorias").insert({
             nome: nomeCategoria,
-            tipo: tipoCategoria,
         });
+
         setNomeCategoria("");
         setModalCategoria(false);
         carregar();
@@ -147,19 +147,27 @@ export default function Home() {
         carregar();
     }
 
-    const despesasMes = despesas.filter(
-        (d) =>
-            d.mes === mes &&
-            d.ano === ano &&
-            (modoResumo || d.card_id === cardSelecionado),
-    );
+    // 🔥 Filtro mês + ano + cartão
+    const despesasMes = despesas.filter((d) => {
+        const mesmoMes = d.mes === mes;
+        const mesmoAno = d.ano === ano;
+
+        if (!mesmoMes || !mesmoAno) return false;
+
+        if (modoResumo) return true;
+
+        return d.card_id === cardSelecionado;
+    });
 
     const totalMes = despesasMes.reduce((acc, d) => acc + Number(d.valor), 0);
 
+    // 🔥 Resumo geral anual correto
     const resumoAnual = Array.from({ length: 12 }, (_, i) => {
         const total = despesas
             .filter((d) => d.mes === i + 1 && d.ano === ano)
-            .reduce((acc, d) => acc + Number(d.valor), 0);
+            .reduce((acc, d) => {
+                return acc + Number(d.valor);
+            }, 0);
 
         return { mes: nomesMeses[i], total };
     });
@@ -242,7 +250,7 @@ export default function Home() {
                 )}
             </div>
 
-            {/* BOTÃO FLUTUANTE */}
+            {/* Botão flutuante */}
             <button
                 onClick={() => setModalDespesa(true)}
                 className="fixed bottom-6 right-6 bg-purple-600 text-white w-16 h-16 rounded-full text-3xl"
@@ -250,27 +258,23 @@ export default function Home() {
                 +
             </button>
 
-            {/* MODAIS */}
             {/* Modal Cartão */}
             {modalCard && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
                     <div className="bg-white p-6 rounded-xl w-80">
                         <h2 className="font-bold mb-4">Novo Cartão</h2>
-
                         <input
                             placeholder="Nome do cartão"
                             className="w-full border p-2 mb-3 rounded"
                             value={nomeCard}
                             onChange={(e) => setNomeCard(e.target.value)}
                         />
-
                         <button
                             onClick={criarCard}
                             className="w-full bg-purple-600 text-white py-2 rounded"
                         >
                             Salvar
                         </button>
-
                         <button
                             onClick={() => setModalCard(false)}
                             className="w-full mt-2 text-gray-500"
@@ -286,30 +290,18 @@ export default function Home() {
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
                     <div className="bg-white p-6 rounded-xl w-80">
                         <h2 className="font-bold mb-4">Nova Categoria</h2>
-
                         <input
                             placeholder="Nome da categoria"
                             className="w-full border p-2 mb-3 rounded"
                             value={nomeCategoria}
                             onChange={(e) => setNomeCategoria(e.target.value)}
                         />
-
-                        <select
-                            className="w-full border p-2 mb-3 rounded"
-                            value={tipoCategoria}
-                            onChange={(e) => setTipoCategoria(e.target.value)}
-                        >
-                            <option value="normal">Normal</option>
-                            <option value="fixa">Fixa</option>
-                        </select>
-
                         <button
                             onClick={criarCategoria}
                             className="w-full bg-purple-600 text-white py-2 rounded"
                         >
                             Salvar
                         </button>
-
                         <button
                             onClick={() => setModalCategoria(false)}
                             className="w-full mt-2 text-gray-500"
