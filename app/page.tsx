@@ -92,7 +92,9 @@ export default function Home() {
 
         setNomeCategoria("");
         setModalCategoria(false);
-        carregar();
+
+        const { data } = await supabase.from("categorias").select("*");
+        setCategorias(data || []);
     }
 
     async function salvarDespesa() {
@@ -147,27 +149,18 @@ export default function Home() {
         carregar();
     }
 
-    // 🔥 Filtro mês + ano + cartão
     const despesasMes = despesas.filter((d) => {
-        const mesmoMes = d.mes === mes;
-        const mesmoAno = d.ano === ano;
-
-        if (!mesmoMes || !mesmoAno) return false;
-
+        if (d.mes !== mes || d.ano !== ano) return false;
         if (modoResumo) return true;
-
         return d.card_id === cardSelecionado;
     });
 
     const totalMes = despesasMes.reduce((acc, d) => acc + Number(d.valor), 0);
 
-    // 🔥 Resumo geral anual correto
     const resumoAnual = Array.from({ length: 12 }, (_, i) => {
         const total = despesas
             .filter((d) => d.mes === i + 1 && d.ano === ano)
-            .reduce((acc, d) => {
-                return acc + Number(d.valor);
-            }, 0);
+            .reduce((acc, d) => acc + Number(d.valor), 0);
 
         return { mes: nomesMeses[i], total };
     });
@@ -215,6 +208,28 @@ export default function Home() {
 
             {/* Conteúdo */}
             <div className="flex-1 p-6">
+                {/* Seletor mês/ano */}
+                <div className="flex gap-4 mb-6 items-center">
+                    <select
+                        value={mes}
+                        onChange={(e) => setMes(Number(e.target.value))}
+                        className="border p-2 rounded"
+                    >
+                        {nomesMeses.map((nome, index) => (
+                            <option key={index} value={index + 1}>
+                                {nome}
+                            </option>
+                        ))}
+                    </select>
+
+                    <input
+                        type="number"
+                        value={ano}
+                        onChange={(e) => setAno(Number(e.target.value))}
+                        className="border p-2 rounded w-28"
+                    />
+                </div>
+
                 {!modoResumo && cardSelecionado && (
                     <>
                         <h2 className="text-xl font-bold mb-4">
@@ -257,154 +272,6 @@ export default function Home() {
             >
                 +
             </button>
-
-            {/* Modal Cartão */}
-            {modalCard && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-xl w-80">
-                        <h2 className="font-bold mb-4">Novo Cartão</h2>
-                        <input
-                            placeholder="Nome do cartão"
-                            className="w-full border p-2 mb-3 rounded"
-                            value={nomeCard}
-                            onChange={(e) => setNomeCard(e.target.value)}
-                        />
-                        <button
-                            onClick={criarCard}
-                            className="w-full bg-purple-600 text-white py-2 rounded"
-                        >
-                            Salvar
-                        </button>
-                        <button
-                            onClick={() => setModalCard(false)}
-                            className="w-full mt-2 text-gray-500"
-                        >
-                            Cancelar
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Modal Categoria */}
-            {modalCategoria && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-xl w-80">
-                        <h2 className="font-bold mb-4">Nova Categoria</h2>
-                        <input
-                            placeholder="Nome da categoria"
-                            className="w-full border p-2 mb-3 rounded"
-                            value={nomeCategoria}
-                            onChange={(e) => setNomeCategoria(e.target.value)}
-                        />
-                        <button
-                            onClick={criarCategoria}
-                            className="w-full bg-purple-600 text-white py-2 rounded"
-                        >
-                            Salvar
-                        </button>
-                        <button
-                            onClick={() => setModalCategoria(false)}
-                            className="w-full mt-2 text-gray-500"
-                        >
-                            Cancelar
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Modal Despesa */}
-            {modalDespesa && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-xl w-96">
-                        <h2 className="font-bold mb-4">Nova Despesa</h2>
-
-                        <input
-                            placeholder="Descrição"
-                            className="w-full border p-2 mb-3 rounded"
-                            value={descricao}
-                            onChange={(e) => setDescricao(e.target.value)}
-                        />
-
-                        <input
-                            type="number"
-                            placeholder="Valor"
-                            className="w-full border p-2 mb-3 rounded"
-                            value={valor}
-                            onChange={(e) => setValor(e.target.value)}
-                        />
-
-                        <select
-                            className="w-full border p-2 mb-3 rounded"
-                            value={cardIdModal}
-                            onChange={(e) => setCardIdModal(e.target.value)}
-                        >
-                            <option value="">Selecione o cartão</option>
-                            {cards.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                    {c.nome}
-                                </option>
-                            ))}
-                        </select>
-
-                        <select
-                            className="w-full border p-2 mb-3 rounded"
-                            value={categoriaId}
-                            onChange={(e) => setCategoriaId(e.target.value)}
-                        >
-                            <option value="">Selecione a categoria</option>
-                            {categorias.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                    {c.nome}
-                                </option>
-                            ))}
-                        </select>
-
-                        <select
-                            className="w-full border p-2 mb-3 rounded"
-                            value={tipo}
-                            onChange={(e) => setTipo(e.target.value)}
-                        >
-                            <option value="normal">Normal</option>
-                            <option value="fixa">Fixa</option>
-                        </select>
-
-                        <div className="flex items-center gap-2 mb-3">
-                            <input
-                                type="checkbox"
-                                checked={parcelado}
-                                onChange={(e) => setParcelado(e.target.checked)}
-                            />
-                            <label>Parcelado</label>
-                        </div>
-
-                        {parcelado && (
-                            <input
-                                type="number"
-                                placeholder="Número de parcelas"
-                                className="w-full border p-2 mb-3 rounded"
-                                value={parcelas}
-                                onChange={(e) =>
-                                    setParcelas(Number(e.target.value))
-                                }
-                            />
-                        )}
-
-                        <button
-                            onClick={salvarDespesa}
-                            className="w-full bg-purple-600 text-white py-2 rounded"
-                        >
-                            Salvar
-                        </button>
-
-                        <button
-                            onClick={() => setModalDespesa(false)}
-                            className="w-full mt-2 text-gray-500"
-                        >
-                            Cancelar
-                        </button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
