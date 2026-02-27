@@ -9,6 +9,7 @@ import Dashboard from "@/components/Dashboard";
 import ModalCartao from "@/components/ModalCartao";
 import ModalCategoria from "@/components/ModalCategoria";
 import ModalDespesa from "@/components/ModalDespesa";
+import GerenciarCategorias from "@/components/GerenciarCategorias";
 
 const nomesMeses = [
     "Janeiro",
@@ -75,24 +76,40 @@ export default function Home() {
 
     async function criarCartao() {
         if (!nomeCard) return;
-        await supabase.from("cards").insert({ nome: nomeCard });
+
+        const { data, error } = await supabase
+            .from("cards")
+            .insert({ nome: nomeCard })
+            .select();
+
+        if (error) {
+            alert("Erro ao criar cartão");
+            return;
+        }
+
+        setCards((prev) => [...prev, ...(data || [])]);
+
         setNomeCard("");
         setModalCartao(false);
-        carregar();
     }
 
     async function criarCategoria() {
         if (!nomeCategoria) return;
 
-        await supabase.from("categorias").insert({
-            nome: nomeCategoria,
-        });
+        const { data, error } = await supabase
+            .from("categorias")
+            .insert({ nome: nomeCategoria })
+            .select();
+
+        if (error) {
+            alert("Erro ao criar categoria");
+            return;
+        }
+
+        setCategorias((prev) => [...prev, ...(data || [])]);
 
         setNomeCategoria("");
         setModalCategoria(false);
-
-        const { data } = await supabase.from("categorias").select("*");
-        setCategorias(data || []);
     }
 
     async function salvarDespesa() {
@@ -222,6 +239,12 @@ export default function Home() {
                 )}
 
                 {modoResumo && <Dashboard resumoAnual={resumoAnual} />}
+
+                {/* Gerenciamento de categorias */}
+                <GerenciarCategorias
+                    categorias={categorias}
+                    atualizar={carregar}
+                />
             </div>
 
             {/* Botão flutuante */}
