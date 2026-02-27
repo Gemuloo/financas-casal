@@ -1,298 +1,199 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { v4 as uuidv4 } from "uuid";
-
-import Sidebar from "@/components/Sidebar";
-import Dashboard from "@/components/Dashboard";
-import ModalCartao from "@/components/ModalCartao";
-import ModalCategoria from "@/components/ModalCategoria";
-import ModalDespesa from "@/components/ModalDespesa";
-import GerenciarCategorias from "@/components/GerenciarCategorias";
-
-const nomesMeses = [
-    "Janeiro",
-    "Fevereiro",
-    "Março",
-    "Abril",
-    "Maio",
-    "Junho",
-    "Julho",
-    "Agosto",
-    "Setembro",
-    "Outubro",
-    "Novembro",
-    "Dezembro",
-];
+import { getCards } from "@/services/cards";
+import { getCategories } from "@/services/categories";
+import { getExpenses, createExpense, deleteExpense } from "@/services/expenses";
+import { formatCurrency } from "@/utils/currency";
 
 export default function Home() {
-    const hoje = new Date();
-
-    const [mes, setMes] = useState(hoje.getMonth() + 1);
-    const [ano, setAno] = useState(hoje.getFullYear());
-
     const [cards, setCards] = useState<any[]>([]);
-    const [categorias, setCategorias] = useState<any[]>([]);
-    const [despesas, setDespesas] = useState<any[]>([]);
+    const [categories, setCategories] = useState<any[]>([]);
+    const [expenses, setExpenses] = useState<any[]>([]);
+    const [month, setMonth] = useState(2);
+    const [year, setYear] = useState(2026);
 
-    const [cardSelecionado, setCardSelecionado] = useState<string | null>(null);
-    const [modoResumo, setModoResumo] = useState(false);
+    const [form, setForm] = useState({
+        description: "",
+        amount: "",
+        card_id: "",
+        category_id: "",
+        is_fixed: false,
+        is_installment: false,
+        installment_total: 1,
+    });
 
-    const [modalDespesa, setModalDespesa] = useState(false);
-    const [modalCartao, setModalCartao] = useState(false);
-    const [modalCategoria, setModalCategoria] = useState(false);
-
-    const [descricao, setDescricao] = useState("");
-    const [valor, setValor] = useState("");
-    const [categoriaId, setCategoriaId] = useState("");
-    const [cardIdModal, setCardIdModal] = useState("");
-    const [tipo, setTipo] = useState("normal");
-    const [parcelado, setParcelado] = useState(false);
-    const [parcelas, setParcelas] = useState(1);
-
-    const [nomeCard, setNomeCard] = useState("");
-    const [nomeCategoria, setNomeCategoria] = useState("");
+    async function load() {
+        setCards(await getCards());
+        setCategories(await getCategories());
+        setExpenses(await getExpenses(month, year));
+    }
 
     useEffect(() => {
-        carregar();
-    }, []);
+        load();
+    }, [month, year]);
 
-    useEffect(() => {
-        if (cards.length > 0 && !cardSelecionado) {
-            setCardSelecionado(cards[0].id);
-        }
-    }, [cards]);
+    async function handleSubmit() {
+        const amount = Number(form.amount);
 
-    async function carregar() {
-        const { data: c } = await supabase.from("cards").select("*");
-        const { data: cat } = await supabase.from("categorias").select("*");
-        const { data: d } = await supabase.from("despesas").select("*");
-
-        setCards(c || []);
-        setCategorias(cat || []);
-        setDespesas(d || []);
-    }
-
-    async function criarCartao() {
-        if (!nomeCard) return;
-
-        const { data, error } = await supabase
-            .from("cards")
-            .insert({ nome: nomeCard })
-            .select();
-
-        if (error) {
-            alert("Erro ao criar cartão");
-            return;
-        }
-
-        setCards((prev) => [...prev, ...(data || [])]);
-
-        setNomeCard("");
-        setModalCartao(false);
-    }
-
-    async function criarCategoria() {
-        if (!nomeCategoria) return;
-
-        const { data, error } = await supabase
-            .from("categorias")
-            .insert({ nome: nomeCategoria })
-            .select();
-
-        if (error) {
-            alert("Erro ao criar categoria");
-            return;
-        }
-
-        setCategorias((prev) => [...prev, ...(data || [])]);
-
-        setNomeCategoria("");
-        setModalCategoria(false);
-    }
-
-    async function salvarDespesa() {
-        if (!cardIdModal || !categoriaId) {
-            alert("Selecione cartão e categoria");
-            return;
-        }
-
-        const valorNumero = parseFloat(valor);
-        const grupo = uuidv4();
-
-        if (parcelado && parcelas > 1) {
-            const valorParcela = valorNumero / parcelas;
-
-            for (let i = 0; i < parcelas; i++) {
-                const novaData = new Date(ano, mes - 1 + i, 1);
-
-                await supabase.from("despesas").insert({
-                    descricao,
-                    valor: valorParcela,
-                    categoria_id: categoriaId,
-                    card_id: cardIdModal,
-                    tipo,
-                    parcelado: true,
-                    grupo_parcela: grupo,
-                    numero_parcela: i + 1,
-                    total_parcelas: parcelas,
-                    mes: novaData.getMonth() + 1,
-                    ano: novaData.getFullYear(),
-                    data: novaData,
+        if (form.is_installment) {
+            for (let i = 1; i <= form.installment_total; i++) {
+                await createExpense({
+                    ...form,
+                    amount,
+                    month: month + (i - 1),
+                    year,
+                    installment_current: i,
                 });
             }
         } else {
-            await supabase.from("despesas").insert({
-                descricao,
-                valor: valorNumero,
-                categoria_id: categoriaId,
-                card_id: cardIdModal,
-                tipo,
-                parcelado: false,
-                mes,
-                ano,
-                data: new Date(),
+            await createExpense({
+                ...form,
+                amount,
+                month,
+                year,
             });
         }
 
-        setModalDespesa(false);
-        setDescricao("");
-        setValor("");
-        setParcelado(false);
-        setParcelas(1);
+        setForm({
+            description: "",
+            amount: "",
+            card_id: "",
+            category_id: "",
+            is_fixed: false,
+            is_installment: false,
+            installment_total: 1,
+        });
 
-        carregar();
+        load();
     }
 
-    const despesasMes = despesas.filter((d) => {
-        if (d.mes !== mes || d.ano !== ano) return false;
-        if (modoResumo) return true;
-        return d.card_id === cardSelecionado;
-    });
-
-    const totalMes = despesasMes.reduce((acc, d) => acc + Number(d.valor), 0);
-
-    const resumoAnual = Array.from({ length: 12 }, (_, i) => {
-        const total = despesas
-            .filter((d) => d.mes === i + 1 && d.ano === ano)
-            .reduce((acc, d) => acc + Number(d.valor), 0);
-
-        return { mes: nomesMeses[i], total };
-    });
+    const total = expenses.reduce((acc, e) => acc + Number(e.amount), 0);
 
     return (
-        <div className="flex min-h-screen bg-gray-100">
-            <Sidebar
-                cards={cards}
-                selecionarCard={(id) => {
-                    setCardSelecionado(id);
-                    setModoResumo(false);
-                }}
-                abrirResumo={() => setModoResumo(true)}
-                abrirModalCartao={() => setModalCartao(true)}
-                abrirModalCategoria={() => setModalCategoria(true)}
-            />
+        <div className="p-10 max-w-5xl mx-auto space-y-6">
+            <h1 className="text-2xl font-bold">Finance App 2026</h1>
 
-            <div className="flex-1 p-6">
-                {/* Seletor mês/ano */}
-                <div className="flex gap-4 mb-6 items-center">
-                    <select
-                        value={mes}
-                        onChange={(e) => setMes(Number(e.target.value))}
-                        className="border p-2 rounded"
-                    >
-                        {nomesMeses.map((nome, index) => (
-                            <option key={index} value={index + 1}>
-                                {nome}
-                            </option>
-                        ))}
-                    </select>
-
-                    <input
-                        type="number"
-                        value={ano}
-                        onChange={(e) => setAno(Number(e.target.value))}
-                        className="border p-2 rounded w-28"
-                    />
-                </div>
-
-                {!modoResumo && cardSelecionado && (
-                    <>
-                        <h2 className="text-xl font-bold mb-4">
-                            {cards.find((c) => c.id === cardSelecionado)?.nome}
-                        </h2>
-
-                        <div className="mb-4 font-bold">
-                            Total do mês: R$ {totalMes.toFixed(2)}
-                        </div>
-
-                        {despesasMes.map((d) => (
-                            <div
-                                key={d.id}
-                                className="bg-white p-3 mb-2 rounded shadow"
-                            >
-                                {d.descricao} - R$ {Number(d.valor).toFixed(2)}
-                            </div>
-                        ))}
-                    </>
-                )}
-
-                {modoResumo && <Dashboard resumoAnual={resumoAnual} />}
-
-                {/* Gerenciamento de categorias */}
-                <GerenciarCategorias
-                    categorias={categorias}
-                    atualizar={carregar}
-                />
+            {/* RESUMO */}
+            <div className="text-xl font-bold">
+                Total: {formatCurrency(total)}
             </div>
 
-            {/* Botão flutuante */}
-            <button
-                onClick={() => setModalDespesa(true)}
-                className="fixed bottom-6 right-6 bg-purple-600 text-white w-16 h-16 rounded-full text-3xl shadow-lg"
-            >
-                +
-            </button>
+            {/* FORM */}
+            <div className="space-y-3 border p-4 rounded-lg">
+                <input
+                    placeholder="Descrição"
+                    value={form.description}
+                    onChange={(e) =>
+                        setForm({ ...form, description: e.target.value })
+                    }
+                    className="border p-2 w-full"
+                />
 
-            {/* Modais */}
-            <ModalCartao
-                aberto={modalCartao}
-                fechar={() => setModalCartao(false)}
-                nomeCard={nomeCard}
-                setNomeCard={setNomeCard}
-                salvar={criarCartao}
-            />
+                <input
+                    type="number"
+                    placeholder="Valor"
+                    value={form.amount}
+                    onChange={(e) =>
+                        setForm({ ...form, amount: e.target.value })
+                    }
+                    className="border p-2 w-full"
+                />
 
-            <ModalCategoria
-                aberto={modalCategoria}
-                fechar={() => setModalCategoria(false)}
-                nomeCategoria={nomeCategoria}
-                setNomeCategoria={setNomeCategoria}
-                salvar={criarCategoria}
-            />
+                <select
+                    onChange={(e) =>
+                        setForm({ ...form, card_id: e.target.value })
+                    }
+                    className="border p-2 w-full"
+                >
+                    <option>Selecione Cartão</option>
+                    {cards.map((c) => (
+                        <option key={c.id} value={c.id}>
+                            {c.name}
+                        </option>
+                    ))}
+                </select>
 
-            <ModalDespesa
-                aberto={modalDespesa}
-                fechar={() => setModalDespesa(false)}
-                salvar={salvarDespesa}
-                cards={cards}
-                categorias={categorias}
-                descricao={descricao}
-                setDescricao={setDescricao}
-                valor={valor}
-                setValor={setValor}
-                categoriaId={categoriaId}
-                setCategoriaId={setCategoriaId}
-                cardId={cardIdModal}
-                setCardId={setCardIdModal}
-                tipo={tipo}
-                setTipo={setTipo}
-                parcelado={parcelado}
-                setParcelado={setParcelado}
-                parcelas={parcelas}
-                setParcelas={setParcelas}
-            />
+                <select
+                    onChange={(e) =>
+                        setForm({ ...form, category_id: e.target.value })
+                    }
+                    className="border p-2 w-full"
+                >
+                    <option>Selecione Categoria</option>
+                    {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                            {c.name}
+                        </option>
+                    ))}
+                </select>
+
+                <label>
+                    <input
+                        type="checkbox"
+                        checked={form.is_installment}
+                        onChange={(e) =>
+                            setForm({
+                                ...form,
+                                is_installment: e.target.checked,
+                            })
+                        }
+                    />
+                    Parcelado?
+                </label>
+
+                {form.is_installment && (
+                    <input
+                        type="number"
+                        placeholder="Nº Parcelas"
+                        value={form.installment_total}
+                        onChange={(e) =>
+                            setForm({
+                                ...form,
+                                installment_total: Number(e.target.value),
+                            })
+                        }
+                        className="border p-2 w-full"
+                    />
+                )}
+
+                <button
+                    onClick={handleSubmit}
+                    className="bg-blue-600 text-white px-4 py-2 rounded"
+                >
+                    Salvar
+                </button>
+            </div>
+
+            {/* LISTA */}
+            <div className="space-y-2">
+                {expenses.map((e) => (
+                    <div
+                        key={e.id}
+                        className="flex justify-between border p-3 rounded"
+                    >
+                        <div>
+                            <div className="font-bold">{e.description}</div>
+                            <div className="text-sm text-gray-500">
+                                {e.cards?.name} • {e.categories?.name}
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 items-center">
+                            <div>{formatCurrency(Number(e.amount))}</div>
+                            <button
+                                onClick={() => {
+                                    deleteExpense(e.id);
+                                    load();
+                                }}
+                                className="text-red-500"
+                            >
+                                X
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
