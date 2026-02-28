@@ -1,38 +1,19 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* Variáveis base */
-:root {
-    --background: #ffffff;
-    --foreground: #171717;
+.custom-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
 }
 
-/* Dark mode automático */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --background: #0a0a0a;
-        --foreground: #ededed;
-    }
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
 }
-
-/* Reset básico */
-body {
-    background: var(--background);
-    color: var(--foreground);
-    font-family: Arial, Helvetica, sans-serif;
-}
-
-/* Animação suave para modais */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-.animate-fadeIn {
-    animation: fadeIn 0.2s ease-out;
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
