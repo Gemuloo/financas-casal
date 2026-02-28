@@ -57,7 +57,6 @@ export default function Home() {
     }
 
     async function fetchDespesas() {
-        // Define o intervalo do mês selecionado
         const firstDay = new Date(
             anoSelecionado,
             mesSelecionado,
@@ -85,7 +84,7 @@ export default function Home() {
         if (data) setDespesas(data);
     }
 
-    // --- CÁLCULOS DO RESUMO (Instruções Salvas) ---
+    // --- CÁLCULOS DO RESUMO (Regras Personalizadas) ---
     const totalNaoParcelados = despesas
         .filter((d) => !d.is_parcelado)
         .reduce((acc, curr) => acc + Number(curr.valor), 0);
@@ -94,7 +93,6 @@ export default function Home() {
         .reduce((acc, curr) => acc + Number(curr.valor), 0);
     const somaTotal = totalNaoParcelados + totalParcelados;
 
-    // Nomes dinâmicos baseados na seleção
     const label1 = cartaoFiltro ? "Contas não Parceladas" : "Saldo em Conta";
     const label2 = cartaoFiltro ? "Contas Parceladas" : "Faturas";
     const label3 = cartaoFiltro ? "Somatório Total" : "Balanço do Mês";
@@ -103,7 +101,6 @@ export default function Home() {
     async function handleConfirmarLancamento() {
         if (!descricao || !valor || !cartaoId)
             return alert("Preencha Descrição, Valor e Cartão!");
-
         const { error } = await supabase.from("despesas").insert([
             {
                 descricao,
@@ -117,10 +114,9 @@ export default function Home() {
                     anoSelecionado,
                     mesSelecionado,
                     10,
-                ).toISOString(), // Lança no mês visível
+                ).toISOString(),
             },
         ]);
-
         if (!error) {
             setDescricao("");
             setValor("");
@@ -157,7 +153,7 @@ export default function Home() {
 
     return (
         <div className="flex h-screen w-screen overflow-hidden bg-slate-50">
-            {/* SIDEBAR (EXCLUSÃO DE BANCOS MANTIDA) */}
+            {/* SIDEBAR */}
             <aside className="hidden md:flex flex-col w-[260px] bg-white border-r h-full flex-shrink-0">
                 <div className="p-6 border-b text-center">
                     <h2 className="font-black text-slate-800 text-lg uppercase tracking-tighter">
@@ -201,7 +197,7 @@ export default function Home() {
                                 onChange={(e) =>
                                     setMesSelecionado(Number(e.target.value))
                                 }
-                                className="appearance-none bg-white border border-slate-200 px-6 py-2 rounded-full font-black text-[10px] uppercase text-slate-700 outline-none shadow-sm cursor-pointer hover:border-blue-400"
+                                className="appearance-none bg-white border border-slate-200 px-6 py-2 rounded-full font-black text-[10px] uppercase text-slate-700 outline-none shadow-sm cursor-pointer"
                             >
                                 {[
                                     "Janeiro",
@@ -227,7 +223,7 @@ export default function Home() {
                                 onChange={(e) =>
                                     setAnoSelecionado(Number(e.target.value))
                                 }
-                                className="appearance-none bg-white border border-slate-200 px-6 py-2 rounded-full font-black text-[10px] uppercase text-slate-700 outline-none shadow-sm cursor-pointer hover:border-blue-400"
+                                className="appearance-none bg-white border border-slate-200 px-6 py-2 rounded-full font-black text-[10px] uppercase text-slate-700 outline-none shadow-sm cursor-pointer"
                             >
                                 {[2024, 2025, 2026, 2027].map((a) => (
                                     <option key={a} value={a}>
@@ -240,7 +236,7 @@ export default function Home() {
 
                     {/* CARDS DINÂMICOS */}
                     <section className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
-                        <div className="bg-white p-8 rounded-[1.5rem] shadow-sm border border-slate-100 transition-all">
+                        <div className="bg-white p-8 rounded-[1.5rem] shadow-sm border border-slate-100">
                             <p className="text-[9px] font-black text-slate-400 uppercase mb-1 tracking-widest">
                                 {label1}
                             </p>
@@ -251,7 +247,7 @@ export default function Home() {
                                 })}
                             </h3>
                         </div>
-                        <div className="bg-white p-8 rounded-[1.5rem] shadow-sm border border-slate-100 transition-all">
+                        <div className="bg-white p-8 rounded-[1.5rem] shadow-sm border border-slate-100">
                             <p className="text-[9px] font-black text-slate-400 uppercase mb-1 tracking-widest">
                                 {label2}
                             </p>
@@ -262,7 +258,7 @@ export default function Home() {
                                 })}
                             </h3>
                         </div>
-                        <div className="bg-white p-8 rounded-[1.5rem] shadow-sm border border-blue-100 bg-blue-50/20 transition-all">
+                        <div className="bg-white p-8 rounded-[1.5rem] shadow-sm border border-blue-100 bg-blue-50/20">
                             <p className="text-[9px] font-black text-blue-600 uppercase mb-1 tracking-widest">
                                 {label3}
                             </p>
@@ -275,7 +271,7 @@ export default function Home() {
                         </div>
                     </section>
 
-                    {/* BOTÃO SOMENTE PARCELADOS */}
+                    {/* BOTÃO PARCELADOS */}
                     <div className="flex justify-center mb-8">
                         <button
                             onClick={() =>
@@ -306,7 +302,7 @@ export default function Home() {
                                 {despesas.map((d) => (
                                     <tr
                                         key={d.id}
-                                        className="border-t border-slate-50 hover:bg-slate-50/50 group"
+                                        className="border-t border-slate-50 hover:bg-slate-50/50"
                                     >
                                         <td className="p-6">
                                             {d.descricao}{" "}
@@ -352,7 +348,7 @@ export default function Home() {
                 <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-end gap-6 z-50">
                     <button
                         onClick={() => setActiveModal("resumo")}
-                        className="bg-white w-20 h-20 rounded-[1.2rem] shadow-2xl border border-slate-50 flex flex-col items-center justify-center hover:scale-110 transition-all"
+                        className="bg-white w-20 h-20 rounded-[1.2rem] shadow-2xl border border-slate-50 flex flex-col items-center justify-center hover:scale-110 transition-all cursor-pointer"
                     >
                         <i className="fas fa-chart-pie text-slate-300 text-xl"></i>
                         <span className="text-[9px] font-black mt-1 text-slate-400 uppercase">
@@ -362,7 +358,7 @@ export default function Home() {
 
                     <button
                         onClick={() => setActiveModal("lancar")}
-                        className="bg-blue-600 w-28 h-28 rounded-[1.8rem] shadow-2xl border-8 border-white flex flex-col items-center justify-center -translate-y-4 hover:scale-105 active:scale-95 transition-all"
+                        className="bg-blue-600 w-28 h-28 rounded-[1.8rem] shadow-2xl border-8 border-white flex flex-col items-center justify-center -translate-y-4 hover:scale-105 transition-all"
                     >
                         <i className="fas fa-plus text-white text-4xl"></i>
                         <span className="text-[10px] font-black mt-1 text-white uppercase tracking-widest">
@@ -371,34 +367,96 @@ export default function Home() {
                     </button>
 
                     {/* MENU CRIAR COM HOVER CORRIGIDO */}
-                    <div className="relative group p-2">
+                    <div className="relative group">
                         <button className="bg-white w-20 h-20 rounded-[1.2rem] shadow-2xl border border-slate-50 flex flex-col items-center justify-center hover:scale-110 transition-all">
                             <i className="fas fa-plus-square text-slate-300 text-xl"></i>
                             <span className="text-[9px] font-black mt-1 text-slate-400 uppercase">
                                 Criar
                             </span>
                         </button>
-                        <div className="absolute bottom-full mb-4 right-0 w-48 bg-white rounded-[1.2rem] shadow-2xl border p-2 hidden group-hover:block transition-all animate-in fade-in slide-in-from-bottom-2">
-                            <button
-                                onClick={() => setActiveModal("cartao")}
-                                className="w-full text-left p-3 hover:bg-blue-50 rounded-xl text-[9px] font-black uppercase flex items-center gap-3 text-slate-600"
-                            >
-                                <i className="fas fa-credit-card text-blue-500"></i>{" "}
-                                Criar Cartão
-                            </button>
-                            <button
-                                onClick={() => setActiveModal("categoria")}
-                                className="w-full text-left p-3 hover:bg-blue-50 rounded-xl text-[9px] font-black uppercase flex items-center gap-3 text-slate-600"
-                            >
-                                <i className="fas fa-tags text-emerald-500"></i>{" "}
-                                Criar Categoria
-                            </button>
+                        <div className="absolute bottom-[80px] right-0 w-48 pb-6 hidden group-hover:block">
+                            <div className="bg-white rounded-[1.2rem] shadow-2xl border p-2 animate-in fade-in slide-in-from-bottom-2">
+                                <button
+                                    onClick={() => setActiveModal("cartao")}
+                                    className="w-full text-left p-3 hover:bg-blue-50 rounded-xl text-[9px] font-black uppercase flex items-center gap-3 text-slate-600"
+                                >
+                                    <i className="fas fa-credit-card text-blue-500"></i>{" "}
+                                    Criar Cartão
+                                </button>
+                                <button
+                                    onClick={() => setActiveModal("categoria")}
+                                    className="w-full text-left p-3 hover:bg-blue-50 rounded-xl text-[9px] font-black uppercase flex items-center gap-3 text-slate-600"
+                                >
+                                    <i className="fas fa-tags text-emerald-500"></i>{" "}
+                                    Criar Categoria
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </main>
 
-            {/* MODAL LANÇAMENTO (Z-INDEX 100) */}
+            {/* MODAL RESUMO DETALHADO */}
+            {activeModal === "resumo" && (
+                <div
+                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
+                    onClick={() => setActiveModal(null)}
+                >
+                    <div
+                        className="bg-white w-full max-w-[400px] rounded-[2rem] p-8 shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-black text-slate-800 text-xl uppercase tracking-tighter">
+                                Resumo do Mês
+                            </h3>
+                            <button
+                                onClick={() => setActiveModal(null)}
+                                className="text-slate-400 hover:text-red-500 p-2 text-xl"
+                            >
+                                <i className="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl">
+                                <span className="text-[10px] font-black text-slate-400 uppercase">
+                                    {label1}
+                                </span>
+                                <span className="font-bold text-slate-700">
+                                    {totalNaoParcelados.toLocaleString(
+                                        "pt-br",
+                                        { style: "currency", currency: "BRL" },
+                                    )}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl">
+                                <span className="text-[10px] font-black text-slate-400 uppercase">
+                                    {label2}
+                                </span>
+                                <span className="font-bold text-slate-700">
+                                    {totalParcelados.toLocaleString("pt-br", {
+                                        style: "currency",
+                                        currency: "BRL",
+                                    })}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center p-6 bg-blue-600 rounded-2xl shadow-xl shadow-blue-100">
+                                <span className="text-[10px] font-black text-white uppercase">
+                                    {label3}
+                                </span>
+                                <span className="text-2xl font-black text-white">
+                                    {somaTotal.toLocaleString("pt-br", {
+                                        style: "currency",
+                                        currency: "BRL",
+                                    })}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL LANÇAMENTO */}
             {activeModal === "lancar" && (
                 <div
                     className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
@@ -414,7 +472,7 @@ export default function Home() {
                             </h3>
                             <button
                                 onClick={() => setActiveModal(null)}
-                                className="text-slate-400 hover:text-red-500 p-2 text-xl transition-all"
+                                className="text-slate-400 hover:text-red-500 p-2 text-xl"
                             >
                                 <i className="fas fa-times"></i>
                             </button>
@@ -510,7 +568,7 @@ export default function Home() {
                 </div>
             )}
 
-            {/* OUTROS MODAIS (MESMA LÓGICA DE FECHAMENTO) */}
+            {/* MODAL CARTÃO */}
             {activeModal === "cartao" && (
                 <div
                     className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
@@ -540,6 +598,7 @@ export default function Home() {
                 </div>
             )}
 
+            {/* MODAL CATEGORIA */}
             {activeModal === "categoria" && (
                 <div
                     className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
