@@ -128,17 +128,25 @@ export default function Home() {
 
     async function handleSalvarCartao() {
         if (!nomeNovoCartao.trim()) return;
-        await supabase.from("cartoes").insert([{ nome: nomeNovoCartao }]);
-        setNomeNovoCartao("");
-        setActiveModal(null);
-        fetchCartoes();
+        const { error } = await supabase
+            .from("cartoes")
+            .insert([{ nome: nomeNovoCartao }]);
+        if (!error) {
+            setNomeNovoCartao("");
+            setActiveModal(null);
+            await fetchCartoes();
+        }
     }
 
     async function handleSalvarCategoria() {
         if (!nomeNovaCategoria.trim()) return;
-        await supabase.from("categorias").insert([{ nome: nomeNovaCategoria }]);
-        setNomeNovaCategoria("");
-        fetchCategorias();
+        const { error } = await supabase
+            .from("categorias")
+            .insert([{ nome: nomeNovaCategoria }]);
+        if (!error) {
+            setNomeNovaCategoria("");
+            await fetchCategorias();
+        }
     }
 
     async function handleExcluir(tabela: string, id: string) {
@@ -197,7 +205,7 @@ export default function Home() {
                                 onChange={(e) =>
                                     setMesSelecionado(Number(e.target.value))
                                 }
-                                className="appearance-none bg-white border border-slate-200 px-6 py-2 rounded-full font-black text-[10px] uppercase text-slate-700 outline-none shadow-sm cursor-pointer"
+                                className="appearance-none bg-white border border-slate-200 px-6 py-2 rounded-full font-black text-[10px] uppercase text-slate-700 outline-none shadow-sm cursor-pointer hover:border-blue-400"
                             >
                                 {[
                                     "Janeiro",
@@ -223,7 +231,7 @@ export default function Home() {
                                 onChange={(e) =>
                                     setAnoSelecionado(Number(e.target.value))
                                 }
-                                className="appearance-none bg-white border border-slate-200 px-6 py-2 rounded-full font-black text-[10px] uppercase text-slate-700 outline-none shadow-sm cursor-pointer"
+                                className="appearance-none bg-white border border-slate-200 px-6 py-2 rounded-full font-black text-[10px] uppercase text-slate-700 outline-none shadow-sm cursor-pointer hover:border-blue-400"
                             >
                                 {[2024, 2025, 2026, 2027].map((a) => (
                                     <option key={a} value={a}>
@@ -374,7 +382,7 @@ export default function Home() {
                                 Criar
                             </span>
                         </button>
-                        <div className="absolute bottom-[80px] right-0 w-48 pb-6 hidden group-hover:block">
+                        <div className="absolute bottom-[80px] right-0 w-48 pb-6 hidden group-hover:block transition-all">
                             <div className="bg-white rounded-[1.2rem] shadow-2xl border p-2 animate-in fade-in slide-in-from-bottom-2">
                                 <button
                                     onClick={() => setActiveModal("cartao")}
@@ -388,7 +396,7 @@ export default function Home() {
                                     className="w-full text-left p-3 hover:bg-blue-50 rounded-xl text-[9px] font-black uppercase flex items-center gap-3 text-slate-600"
                                 >
                                     <i className="fas fa-tags text-emerald-500"></i>{" "}
-                                    Criar Categoria
+                                    Categorias
                                 </button>
                             </div>
                         </div>
@@ -396,19 +404,19 @@ export default function Home() {
                 </div>
             </main>
 
-            {/* MODAL RESUMO DETALHADO */}
+            {/* MODAL RESUMO COM HISTÓRICO MENSAL */}
             {activeModal === "resumo" && (
                 <div
                     className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
                     onClick={() => setActiveModal(null)}
                 >
                     <div
-                        className="bg-white w-full max-w-[400px] rounded-[2rem] p-8 shadow-2xl"
+                        className="bg-white w-full max-w-[400px] rounded-[2rem] p-8 shadow-2xl max-h-[85vh] flex flex-col"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="font-black text-slate-800 text-xl uppercase tracking-tighter">
-                                Resumo do Mês
+                                Histórico Mensal
                             </h3>
                             <button
                                 onClick={() => setActiveModal(null)}
@@ -417,46 +425,131 @@ export default function Home() {
                                 <i className="fas fa-times"></i>
                             </button>
                         </div>
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl">
-                                <span className="text-[10px] font-black text-slate-400 uppercase">
-                                    {label1}
-                                </span>
-                                <span className="font-bold text-slate-700">
-                                    {totalNaoParcelados.toLocaleString(
-                                        "pt-br",
-                                        { style: "currency", currency: "BRL" },
-                                    )}
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl">
-                                <span className="text-[10px] font-black text-slate-400 uppercase">
-                                    {label2}
-                                </span>
-                                <span className="font-bold text-slate-700">
-                                    {totalParcelados.toLocaleString("pt-br", {
-                                        style: "currency",
-                                        currency: "BRL",
-                                    })}
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center p-6 bg-blue-600 rounded-2xl shadow-xl shadow-blue-100">
-                                <span className="text-[10px] font-black text-white uppercase">
-                                    {label3}
-                                </span>
-                                <span className="text-2xl font-black text-white">
+                        <div className="flex-1 overflow-y-auto custom-scroll space-y-4 pr-2">
+                            <div className="bg-blue-600 p-6 rounded-2xl shadow-xl shadow-blue-100 text-white mb-6">
+                                <p className="text-[9px] font-black uppercase opacity-70 mb-1">
+                                    {label3} (
+                                    {
+                                        [
+                                            "Jan",
+                                            "Fev",
+                                            "Mar",
+                                            "Abr",
+                                            "Mai",
+                                            "Jun",
+                                            "Jul",
+                                            "Ago",
+                                            "Set",
+                                            "Out",
+                                            "Nov",
+                                            "Dez",
+                                        ][mesSelecionado]
+                                    }
+                                    )
+                                </p>
+                                <h2 className="text-2xl font-black">
                                     {somaTotal.toLocaleString("pt-br", {
                                         style: "currency",
                                         currency: "BRL",
                                     })}
-                                </span>
+                                </h2>
+                            </div>
+                            <div className="space-y-2">
+                                {[
+                                    "Jan",
+                                    "Fev",
+                                    "Mar",
+                                    "Abr",
+                                    "Mai",
+                                    "Jun",
+                                    "Jul",
+                                    "Ago",
+                                    "Set",
+                                    "Out",
+                                    "Nov",
+                                    "Dez",
+                                ].map((mes, idx) => (
+                                    <div
+                                        key={mes}
+                                        className={`flex justify-between p-3 rounded-xl border ${mesSelecionado === idx ? "bg-blue-50 border-blue-200" : "bg-slate-50 border-slate-100"}`}
+                                    >
+                                        <span className="text-[10px] font-black text-slate-500 uppercase">
+                                            {mes}
+                                        </span>
+                                        <span className="text-[10px] font-bold text-slate-700">
+                                            {mesSelecionado === idx
+                                                ? somaTotal.toLocaleString(
+                                                      "pt-br",
+                                                      {
+                                                          style: "currency",
+                                                          currency: "BRL",
+                                                      },
+                                                  )
+                                                : "---"}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* MODAL LANÇAMENTO */}
+            {/* MODAL CATEGORIA COM LISTAGEM */}
+            {activeModal === "categoria" && (
+                <div
+                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
+                    onClick={() => setActiveModal(null)}
+                >
+                    <div
+                        className="bg-white w-full max-w-[400px] rounded-[2rem] p-8 shadow-2xl flex flex-col max-h-[80vh]"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="font-black text-slate-800 text-xl uppercase mb-6 tracking-tighter">
+                            Gerir Categorias
+                        </h3>
+                        <div className="flex gap-2 mb-6">
+                            <input
+                                type="text"
+                                placeholder="Nome..."
+                                value={nomeNovaCategoria}
+                                onChange={(e) =>
+                                    setNomeNovaCategoria(e.target.value)
+                                }
+                                className="flex-1 bg-slate-50 border p-4 rounded-xl font-bold outline-none focus:border-emerald-400 text-xs"
+                            />
+                            <button
+                                onClick={handleSalvarCategoria}
+                                className="bg-emerald-600 text-white px-6 rounded-xl font-black uppercase text-[10px]"
+                            >
+                                Add
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto custom-scroll space-y-2 pr-2">
+                            {categorias.map((cat) => (
+                                <div
+                                    key={cat.id}
+                                    className="flex justify-between items-center p-4 bg-slate-50 rounded-xl group border border-slate-100"
+                                >
+                                    <span className="text-[10px] font-black text-slate-500 uppercase">
+                                        {cat.nome}
+                                    </span>
+                                    <button
+                                        onClick={() =>
+                                            handleExcluir("categorias", cat.id)
+                                        }
+                                        className="text-red-300 hover:text-red-500 transition-all"
+                                    >
+                                        <i className="fas fa-trash-alt text-[10px]"></i>
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAIS RESTANTES (LANÇAR E CARTÃO) - MANTIDOS CONFORME REGRAS */}
             {activeModal === "lancar" && (
                 <div
                     className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
@@ -500,7 +593,7 @@ export default function Home() {
                                     }
                                     className="bg-slate-50 border p-3 rounded-xl font-bold text-[10px] uppercase"
                                 >
-                                    <option value="">Origem/Cartão</option>
+                                    <option value="">Cartão/Banco</option>
                                     {cartoes.map((c) => (
                                         <option key={c.id} value={c.id}>
                                             {c.nome}
@@ -554,7 +647,7 @@ export default function Home() {
                                     onChange={(e) =>
                                         setQtdParcelas(e.target.value)
                                     }
-                                    className="w-full bg-blue-50 border border-blue-100 p-4 rounded-xl text-xs font-bold text-blue-700"
+                                    className="w-full bg-blue-50 border border-blue-100 p-4 rounded-xl text-xs font-bold text-blue-700 shadow-inner"
                                 />
                             )}
                             <button
@@ -568,7 +661,6 @@ export default function Home() {
                 </div>
             )}
 
-            {/* MODAL CARTÃO */}
             {activeModal === "cartao" && (
                 <div
                     className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
@@ -583,7 +675,7 @@ export default function Home() {
                         </h3>
                         <input
                             type="text"
-                            placeholder="Nome"
+                            placeholder="Nome do Banco"
                             value={nomeNovoCartao}
                             onChange={(e) => setNomeNovoCartao(e.target.value)}
                             className="w-full bg-slate-50 border p-4 rounded-xl font-bold mb-4 outline-none focus:border-blue-400"
@@ -591,38 +683,6 @@ export default function Home() {
                         <button
                             onClick={handleSalvarCartao}
                             className="w-full bg-blue-600 text-white font-black py-4 rounded-xl text-[10px] uppercase"
-                        >
-                            Salvar
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL CATEGORIA */}
-            {activeModal === "categoria" && (
-                <div
-                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
-                    onClick={() => setActiveModal(null)}
-                >
-                    <div
-                        className="bg-white w-full max-w-[400px] rounded-[2rem] p-8 shadow-2xl"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <h3 className="font-black text-slate-800 text-xl uppercase mb-6 tracking-tighter">
-                            Categoria
-                        </h3>
-                        <input
-                            type="text"
-                            placeholder="Nome"
-                            value={nomeNovaCategoria}
-                            onChange={(e) =>
-                                setNomeNovaCategoria(e.target.value)
-                            }
-                            className="w-full bg-slate-50 border p-4 rounded-xl font-bold mb-4 outline-none focus:border-emerald-400"
-                        />
-                        <button
-                            onClick={handleSalvarCategoria}
-                            className="w-full bg-emerald-600 text-white font-black py-4 rounded-xl text-[10px] uppercase"
                         >
                             Salvar
                         </button>
