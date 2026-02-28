@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
 export default function Home() {
-    // --- ESTADOS DE UI E FILTROS ---
+    // --- ESTADOS DE INTERFACE E FILTROS ---
     const [activeModal, setActiveModal] = useState<string | null>(null);
     const [mesSelecionado, setMesSelecionado] = useState(new Date().getMonth());
     const [anoSelecionado, setAnoSelecionado] = useState(
@@ -30,7 +30,7 @@ export default function Home() {
     const [nomeNovoCartao, setNomeNovoCartao] = useState("");
     const [nomeNovaCategoria, setNomeNovaCategoria] = useState("");
 
-    // --- SINCRONIZAÇÃO COM SUPABASE ---
+    // --- SINCRONIZAÇÃO ---
     useEffect(() => {
         fetchCartoes();
         fetchCategorias();
@@ -57,6 +57,7 @@ export default function Home() {
     }
 
     async function fetchDespesas() {
+        // Define o intervalo do mês selecionado
         const firstDay = new Date(
             anoSelecionado,
             mesSelecionado,
@@ -84,7 +85,7 @@ export default function Home() {
         if (data) setDespesas(data);
     }
 
-    // --- LÓGICA DE EXIBIÇÃO DINÂMICA (Conforme Instruções Salvas) ---
+    // --- CÁLCULOS DO RESUMO (Instruções Salvas) ---
     const totalNaoParcelados = despesas
         .filter((d) => !d.is_parcelado)
         .reduce((acc, curr) => acc + Number(curr.valor), 0);
@@ -93,7 +94,7 @@ export default function Home() {
         .reduce((acc, curr) => acc + Number(curr.valor), 0);
     const somaTotal = totalNaoParcelados + totalParcelados;
 
-    // Quando visualizando um cartão, os nomes dos campos mudam
+    // Nomes dinâmicos baseados na seleção
     const label1 = cartaoFiltro ? "Contas não Parceladas" : "Saldo em Conta";
     const label2 = cartaoFiltro ? "Contas Parceladas" : "Faturas";
     const label3 = cartaoFiltro ? "Somatório Total" : "Balanço do Mês";
@@ -101,7 +102,7 @@ export default function Home() {
     // --- FUNÇÕES DE AÇÃO ---
     async function handleConfirmarLancamento() {
         if (!descricao || !valor || !cartaoId)
-            return alert("Preencha Descrição, Valor e selecione um Cartão!");
+            return alert("Preencha Descrição, Valor e Cartão!");
 
         const { error } = await supabase.from("despesas").insert([
             {
@@ -112,6 +113,11 @@ export default function Home() {
                 is_fixa: isFixa,
                 is_parcelado: isParcelado,
                 parcelas: isParcelado ? parseInt(qtdParcelas) : 1,
+                data: new Date(
+                    anoSelecionado,
+                    mesSelecionado,
+                    10,
+                ).toISOString(), // Lança no mês visível
             },
         ]);
 
@@ -150,8 +156,8 @@ export default function Home() {
     }
 
     return (
-        <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans">
-            {/* SIDEBAR: Gerenciamento de Bancos/Cartões */}
+        <div className="flex h-screen w-screen overflow-hidden bg-slate-50">
+            {/* SIDEBAR (EXCLUSÃO DE BANCOS MANTIDA) */}
             <aside className="hidden md:flex flex-col w-[260px] bg-white border-r h-full flex-shrink-0">
                 <div className="p-6 border-b text-center">
                     <h2 className="font-black text-slate-800 text-lg uppercase tracking-tighter">
@@ -185,10 +191,9 @@ export default function Home() {
                 </div>
             </aside>
 
-            {/* CONTEÚDO PRINCIPAL */}
             <main className="flex-1 h-full relative overflow-hidden flex flex-col">
                 <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scroll pb-[160px]">
-                    {/* SELETOR DE MÊS/ANO */}
+                    {/* SELETOR DATA */}
                     <div className="flex flex-col items-center gap-4 mb-8">
                         <div className="flex items-center gap-2">
                             <select
@@ -196,7 +201,7 @@ export default function Home() {
                                 onChange={(e) =>
                                     setMesSelecionado(Number(e.target.value))
                                 }
-                                className="appearance-none bg-white border border-slate-200 px-6 py-2 rounded-full font-black text-[10px] uppercase text-slate-700 outline-none shadow-sm cursor-pointer hover:border-blue-400 transition-all"
+                                className="appearance-none bg-white border border-slate-200 px-6 py-2 rounded-full font-black text-[10px] uppercase text-slate-700 outline-none shadow-sm cursor-pointer hover:border-blue-400"
                             >
                                 {[
                                     "Janeiro",
@@ -222,7 +227,7 @@ export default function Home() {
                                 onChange={(e) =>
                                     setAnoSelecionado(Number(e.target.value))
                                 }
-                                className="appearance-none bg-white border border-slate-200 px-6 py-2 rounded-full font-black text-[10px] uppercase text-slate-700 outline-none shadow-sm cursor-pointer hover:border-blue-400 transition-all"
+                                className="appearance-none bg-white border border-slate-200 px-6 py-2 rounded-full font-black text-[10px] uppercase text-slate-700 outline-none shadow-sm cursor-pointer hover:border-blue-400"
                             >
                                 {[2024, 2025, 2026, 2027].map((a) => (
                                     <option key={a} value={a}>
@@ -233,9 +238,9 @@ export default function Home() {
                         </div>
                     </div>
 
-                    {/* CARDS DE RESUMO DINÂMICOS */}
+                    {/* CARDS DINÂMICOS */}
                     <section className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
-                        <div className="bg-white p-8 rounded-[1.5rem] shadow-sm border border-slate-100">
+                        <div className="bg-white p-8 rounded-[1.5rem] shadow-sm border border-slate-100 transition-all">
                             <p className="text-[9px] font-black text-slate-400 uppercase mb-1 tracking-widest">
                                 {label1}
                             </p>
@@ -246,7 +251,7 @@ export default function Home() {
                                 })}
                             </h3>
                         </div>
-                        <div className="bg-white p-8 rounded-[1.5rem] shadow-sm border border-slate-100">
+                        <div className="bg-white p-8 rounded-[1.5rem] shadow-sm border border-slate-100 transition-all">
                             <p className="text-[9px] font-black text-slate-400 uppercase mb-1 tracking-widest">
                                 {label2}
                             </p>
@@ -257,7 +262,7 @@ export default function Home() {
                                 })}
                             </h3>
                         </div>
-                        <div className="bg-white p-8 rounded-[1.5rem] shadow-sm border border-blue-100 bg-blue-50/20">
+                        <div className="bg-white p-8 rounded-[1.5rem] shadow-sm border border-blue-100 bg-blue-50/20 transition-all">
                             <p className="text-[9px] font-black text-blue-600 uppercase mb-1 tracking-widest">
                                 {label3}
                             </p>
@@ -278,7 +283,7 @@ export default function Home() {
                                     !filtroSomenteParcelados,
                                 )
                             }
-                            className={`px-8 py-3 rounded-full text-[9px] font-black uppercase tracking-widest transition-all shadow-lg ${filtroSomenteParcelados ? "bg-orange-500 text-white" : "bg-blue-600 text-white"}`}
+                            className={`px-8 py-3 rounded-full text-[9px] font-black uppercase tracking-widest transition-all shadow-lg ${filtroSomenteParcelados ? "bg-orange-500 text-white shadow-orange-100" : "bg-blue-600 text-white shadow-blue-100"}`}
                         >
                             {filtroSomenteParcelados
                                 ? "Ver Tudo"
@@ -286,7 +291,7 @@ export default function Home() {
                         </button>
                     </div>
 
-                    {/* TABELA DE LISTAGEM */}
+                    {/* TABELA */}
                     <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
                         <table className="w-full text-left">
                             <thead className="bg-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-widest">
@@ -298,63 +303,52 @@ export default function Home() {
                                 </tr>
                             </thead>
                             <tbody className="text-xs font-bold text-slate-700">
-                                {despesas.length === 0 ? (
-                                    <tr>
-                                        <td
-                                            colSpan={4}
-                                            className="p-10 text-center text-slate-300 italic uppercase tracking-widest"
-                                        >
-                                            Nenhuma despesa para este período.
+                                {despesas.map((d) => (
+                                    <tr
+                                        key={d.id}
+                                        className="border-t border-slate-50 hover:bg-slate-50/50 group"
+                                    >
+                                        <td className="p-6">
+                                            {d.descricao}{" "}
+                                            {d.is_parcelado && (
+                                                <span className="ml-2 text-[8px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded font-black">
+                                                    P
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="p-6 text-slate-400 text-[10px] uppercase">
+                                            {d.cartoes?.nome}
+                                        </td>
+                                        <td className="p-6">
+                                            {Number(d.valor).toLocaleString(
+                                                "pt-br",
+                                                {
+                                                    style: "currency",
+                                                    currency: "BRL",
+                                                },
+                                            )}
+                                        </td>
+                                        <td className="p-6 text-center">
+                                            <button
+                                                onClick={() =>
+                                                    handleExcluir(
+                                                        "despesas",
+                                                        d.id,
+                                                    )
+                                                }
+                                                className="text-red-200 hover:text-red-500"
+                                            >
+                                                <i className="fas fa-trash-alt"></i>
+                                            </button>
                                         </td>
                                     </tr>
-                                ) : (
-                                    despesas.map((d) => (
-                                        <tr
-                                            key={d.id}
-                                            className="border-t border-slate-50 hover:bg-slate-50/50 transition-all group"
-                                        >
-                                            <td className="p-6">
-                                                {d.descricao}
-                                                {d.is_parcelado && (
-                                                    <span className="ml-3 text-[8px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-black">
-                                                        PARCELADO
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="p-6 text-slate-400 text-[10px] uppercase">
-                                                {d.cartoes?.nome}
-                                            </td>
-                                            <td className="p-6">
-                                                {Number(d.valor).toLocaleString(
-                                                    "pt-br",
-                                                    {
-                                                        style: "currency",
-                                                        currency: "BRL",
-                                                    },
-                                                )}
-                                            </td>
-                                            <td className="p-6 text-center">
-                                                <button
-                                                    onClick={() =>
-                                                        handleExcluir(
-                                                            "despesas",
-                                                            d.id,
-                                                        )
-                                                    }
-                                                    className="text-red-200 hover:text-red-500 transition-colors"
-                                                >
-                                                    <i className="fas fa-trash-alt"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
+                                ))}
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                {/* CONTROLES FLUTUANTES */}
+                {/* CONTROLES FLUTUANTES (Z-INDEX 50) */}
                 <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-end gap-6 z-50">
                     <button
                         onClick={() => setActiveModal("resumo")}
@@ -376,14 +370,15 @@ export default function Home() {
                         </span>
                     </button>
 
-                    <div className="relative group">
+                    {/* MENU CRIAR COM HOVER CORRIGIDO */}
+                    <div className="relative group p-2">
                         <button className="bg-white w-20 h-20 rounded-[1.2rem] shadow-2xl border border-slate-50 flex flex-col items-center justify-center hover:scale-110 transition-all">
                             <i className="fas fa-plus-square text-slate-300 text-xl"></i>
                             <span className="text-[9px] font-black mt-1 text-slate-400 uppercase">
                                 Criar
                             </span>
                         </button>
-                        <div className="absolute bottom-24 right-0 w-48 bg-white rounded-[1.2rem] shadow-2xl border p-2 hidden group-hover:block transition-all animate-in slide-in-from-bottom-2">
+                        <div className="absolute bottom-full mb-4 right-0 w-48 bg-white rounded-[1.2rem] shadow-2xl border p-2 hidden group-hover:block transition-all animate-in fade-in slide-in-from-bottom-2">
                             <button
                                 onClick={() => setActiveModal("cartao")}
                                 className="w-full text-left p-3 hover:bg-blue-50 rounded-xl text-[9px] font-black uppercase flex items-center gap-3 text-slate-600"
@@ -403,19 +398,23 @@ export default function Home() {
                 </div>
             </main>
 
-            {/* --- MODAIS DE CADASTRO --- */}
-
-            {/* NOVO LANÇAMENTO */}
+            {/* MODAL LANÇAMENTO (Z-INDEX 100) */}
             {activeModal === "lancar" && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-6">
-                    <div className="bg-white w-full max-w-[400px] rounded-[2rem] p-8 shadow-2xl">
+                <div
+                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
+                    onClick={() => setActiveModal(null)}
+                >
+                    <div
+                        className="bg-white w-full max-w-[400px] rounded-[2rem] p-8 shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="font-black text-slate-800 text-xl uppercase tracking-tighter">
                                 Novo Lançamento
                             </h3>
                             <button
                                 onClick={() => setActiveModal(null)}
-                                className="text-slate-400 hover:text-slate-600"
+                                className="text-slate-400 hover:text-red-500 p-2 text-xl transition-all"
                             >
                                 <i className="fas fa-times"></i>
                             </button>
@@ -465,8 +464,8 @@ export default function Home() {
                                     ))}
                                 </select>
                             </div>
-                            <div className="flex flex-col gap-2 p-2">
-                                <label className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase">
+                            <div className="flex flex-col gap-2 p-1">
+                                <label className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase cursor-pointer">
                                     <input
                                         type="checkbox"
                                         checked={isParcelado}
@@ -477,7 +476,7 @@ export default function Home() {
                                     />{" "}
                                     Conta Parcelada?
                                 </label>
-                                <label className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase">
+                                <label className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase cursor-pointer">
                                     <input
                                         type="checkbox"
                                         checked={isFixa}
@@ -492,17 +491,17 @@ export default function Home() {
                             {isParcelado && (
                                 <input
                                     type="number"
-                                    placeholder="Nº de parcelas"
+                                    placeholder="Parcelas"
                                     value={qtdParcelas}
                                     onChange={(e) =>
                                         setQtdParcelas(e.target.value)
                                     }
-                                    className="w-full bg-blue-50 border border-blue-100 p-4 rounded-xl text-xs font-bold text-blue-700 shadow-inner"
+                                    className="w-full bg-blue-50 border border-blue-100 p-4 rounded-xl text-xs font-bold text-blue-700"
                                 />
                             )}
                             <button
                                 onClick={handleConfirmarLancamento}
-                                className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl mt-4 uppercase tracking-widest text-[10px] shadow-xl shadow-blue-100 hover:bg-blue-700"
+                                className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl mt-4 uppercase tracking-widest text-[10px] shadow-xl hover:bg-blue-700 transition-all"
                             >
                                 Confirmar
                             </button>
@@ -511,78 +510,63 @@ export default function Home() {
                 </div>
             )}
 
-            {/* NOVO CARTÃO */}
+            {/* OUTROS MODAIS (MESMA LÓGICA DE FECHAMENTO) */}
             {activeModal === "cartao" && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-6">
-                    <div className="bg-white w-full max-w-[400px] rounded-[2rem] p-8 shadow-2xl">
+                <div
+                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
+                    onClick={() => setActiveModal(null)}
+                >
+                    <div
+                        className="bg-white w-full max-w-[400px] rounded-[2rem] p-8 shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <h3 className="font-black text-slate-800 text-xl uppercase mb-6 tracking-tighter">
-                            Novo Cartão / Banco
+                            Novo Banco
                         </h3>
                         <input
                             type="text"
-                            placeholder="Nome do Cartão"
+                            placeholder="Nome"
                             value={nomeNovoCartao}
                             onChange={(e) => setNomeNovoCartao(e.target.value)}
-                            className="w-full bg-slate-50 border p-4 rounded-xl font-bold text-slate-700 mb-4 outline-none focus:border-blue-400"
+                            className="w-full bg-slate-50 border p-4 rounded-xl font-bold mb-4 outline-none focus:border-blue-400"
                         />
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setActiveModal(null)}
-                                className="flex-1 bg-slate-100 text-slate-500 font-black py-4 rounded-xl text-[10px] uppercase"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleSalvarCartao}
-                                className="flex-1 bg-blue-600 text-white font-black py-4 rounded-xl text-[10px] uppercase shadow-lg shadow-blue-100"
-                            >
-                                Salvar
-                            </button>
-                        </div>
+                        <button
+                            onClick={handleSalvarCartao}
+                            className="w-full bg-blue-600 text-white font-black py-4 rounded-xl text-[10px] uppercase"
+                        >
+                            Salvar
+                        </button>
                     </div>
                 </div>
             )}
 
-            {/* NOVA CATEGORIA */}
             {activeModal === "categoria" && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-6">
-                    <div className="bg-white w-full max-w-[400px] rounded-[2rem] p-8 shadow-2xl">
+                <div
+                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
+                    onClick={() => setActiveModal(null)}
+                >
+                    <div
+                        className="bg-white w-full max-w-[400px] rounded-[2rem] p-8 shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <h3 className="font-black text-slate-800 text-xl uppercase mb-6 tracking-tighter">
-                            Nova Categoria
+                            Categoria
                         </h3>
                         <input
                             type="text"
-                            placeholder="Nome da Categoria"
+                            placeholder="Nome"
                             value={nomeNovaCategoria}
                             onChange={(e) =>
                                 setNomeNovaCategoria(e.target.value)
                             }
-                            className="w-full bg-slate-50 border p-4 rounded-xl font-bold text-slate-700 mb-4 outline-none focus:border-emerald-400"
+                            className="w-full bg-slate-50 border p-4 rounded-xl font-bold mb-4 outline-none focus:border-emerald-400"
                         />
                         <button
                             onClick={handleSalvarCategoria}
-                            className="w-full bg-emerald-600 text-white font-black py-4 rounded-xl text-[10px] uppercase shadow-lg shadow-emerald-100 mb-6"
+                            className="w-full bg-emerald-600 text-white font-black py-4 rounded-xl text-[10px] uppercase"
                         >
                             Salvar
                         </button>
-                        <div className="space-y-1 max-h-[150px] overflow-y-auto custom-scroll pr-1">
-                            {categorias.map((cat) => (
-                                <div
-                                    key={cat.id}
-                                    className="flex justify-between items-center p-3 bg-slate-50 rounded-xl text-[9px] font-black text-slate-500 uppercase border border-slate-100 group"
-                                >
-                                    {cat.nome}
-                                    <button
-                                        onClick={() =>
-                                            handleExcluir("categorias", cat.id)
-                                        }
-                                        className="text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                                    >
-                                        <i className="fas fa-trash-alt"></i>
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
                     </div>
                 </div>
             )}
