@@ -84,7 +84,7 @@ export default function Home() {
         if (data) setDespesas(data);
     }
 
-    // --- CÁLCULOS DO RESUMO (Regras Personalizadas) ---
+    // --- CÁLCULOS DO RESUMO (Regras Dinâmicas) ---
     const totalNaoParcelados = despesas
         .filter((d) => !d.is_parcelado)
         .reduce((acc, curr) => acc + Number(curr.valor), 0);
@@ -97,7 +97,32 @@ export default function Home() {
     const label2 = cartaoFiltro ? "Contas Parceladas" : "Faturas";
     const label3 = cartaoFiltro ? "Somatório Total" : "Balanço do Mês";
 
-    // --- FUNÇÕES DE AÇÃO ---
+    // --- FUNÇÕES DE AÇÃO CORRIGIDAS ---
+    async function handleSalvarCartao(e: React.FormEvent) {
+        e.preventDefault();
+        if (!nomeNovoCartao.trim()) return;
+        const { error } = await supabase
+            .from("cartoes")
+            .insert([{ nome: nomeNovoCartao }]);
+        if (!error) {
+            setNomeNovoCartao("");
+            setActiveModal(null);
+            fetchCartoes();
+        }
+    }
+
+    async function handleSalvarCategoria(e: React.FormEvent) {
+        e.preventDefault();
+        if (!nomeNovaCategoria.trim()) return;
+        const { error } = await supabase
+            .from("categorias")
+            .insert([{ nome: nomeNovaCategoria }]);
+        if (!error) {
+            setNomeNovaCategoria("");
+            fetchCategorias();
+        }
+    }
+
     async function handleConfirmarLancamento() {
         if (!descricao || !valor || !cartaoId)
             return alert("Preencha Descrição, Valor e Cartão!");
@@ -126,29 +151,6 @@ export default function Home() {
         }
     }
 
-    async function handleSalvarCartao() {
-        if (!nomeNovoCartao.trim()) return;
-        const { error } = await supabase
-            .from("cartoes")
-            .insert([{ nome: nomeNovoCartao }]);
-        if (!error) {
-            setNomeNovoCartao("");
-            setActiveModal(null);
-            await fetchCartoes();
-        }
-    }
-
-    async function handleSalvarCategoria() {
-        if (!nomeNovaCategoria.trim()) return;
-        const { error } = await supabase
-            .from("categorias")
-            .insert([{ nome: nomeNovaCategoria }]);
-        if (!error) {
-            setNomeNovaCategoria("");
-            await fetchCategorias();
-        }
-    }
-
     async function handleExcluir(tabela: string, id: string) {
         if (!confirm("Confirmar exclusão?")) return;
         const { error } = await supabase.from(tabela).delete().eq("id", id);
@@ -161,7 +163,7 @@ export default function Home() {
 
     return (
         <div className="flex h-screen w-screen overflow-hidden bg-slate-50">
-            {/* SIDEBAR */}
+            {/* SIDEBAR - LISTA DE CARTÕES CORRIGIDA */}
             <aside className="hidden md:flex flex-col w-[260px] bg-white border-r h-full flex-shrink-0">
                 <div className="p-6 border-b text-center">
                     <h2 className="font-black text-slate-800 text-lg uppercase tracking-tighter">
@@ -171,32 +173,40 @@ export default function Home() {
                 <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scroll">
                     <button
                         onClick={() => setCartaoFiltro(null)}
-                        className={`w-full text-left p-4 rounded-xl font-bold text-[10px] uppercase transition-all ${!cartaoFiltro ? "bg-blue-600 text-white shadow-lg" : "bg-slate-50 text-slate-500"}`}
+                        className={`w-full text-left p-4 rounded-xl font-bold text-[10px] uppercase transition-all ${!cartaoFiltro ? "bg-blue-600 text-white shadow-lg" : "bg-slate-50 text-slate-500 hover:bg-slate-100"}`}
                     >
                         <i className="fas fa-th-large mr-2"></i> Exibir Tudo
                     </button>
-                    {cartoes.map((c) => (
-                        <div key={c.id} className="group relative">
-                            <button
-                                onClick={() => setCartaoFiltro(c.id)}
-                                className={`w-full text-left p-4 rounded-xl font-bold text-[10px] uppercase transition-all ${cartaoFiltro === c.id ? "bg-blue-600 text-white shadow-lg" : "bg-slate-50 text-slate-500 hover:bg-blue-50"}`}
-                            >
-                                <i className="fas fa-credit-card mr-2"></i>{" "}
-                                {c.nome}
-                            </button>
-                            <button
-                                onClick={() => handleExcluir("cartoes", c.id)}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-red-300 hover:text-red-500 p-2 transition-all"
-                            >
-                                <i className="fas fa-trash-alt text-[10px]"></i>
-                            </button>
-                        </div>
-                    ))}
+
+                    <div className="pt-2 space-y-2">
+                        <p className="text-[8px] font-black text-slate-400 uppercase ml-2 tracking-widest">
+                            Meus Bancos/Cartões
+                        </p>
+                        {cartoes.map((c) => (
+                            <div key={c.id} className="group relative">
+                                <button
+                                    onClick={() => setCartaoFiltro(c.id)}
+                                    className={`w-full text-left p-4 rounded-xl font-bold text-[10px] uppercase transition-all ${cartaoFiltro === c.id ? "bg-blue-600 text-white shadow-lg" : "bg-slate-50 text-slate-500 hover:bg-blue-50"}`}
+                                >
+                                    <i className="fas fa-credit-card mr-2"></i>{" "}
+                                    {c.nome}
+                                </button>
+                                <button
+                                    onClick={() =>
+                                        handleExcluir("cartoes", c.id)
+                                    }
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-red-300 hover:text-red-500 p-2 transition-all"
+                                >
+                                    <i className="fas fa-trash-alt text-[10px]"></i>
+                                </button>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </aside>
 
             <main className="flex-1 h-full relative overflow-hidden flex flex-col">
-                <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scroll pb-[160px]">
+                <div className="flex-1 overflow-y-auto p-6 md:p-8 pb-[160px] custom-scroll">
                     {/* SELETOR DATA */}
                     <div className="flex flex-col items-center gap-4 mb-8">
                         <div className="flex items-center gap-2">
@@ -279,7 +289,7 @@ export default function Home() {
                         </div>
                     </section>
 
-                    {/* BOTÃO PARCELADOS */}
+                    {/* BOTÃO SOMENTE PARCELADOS */}
                     <div className="flex justify-center mb-8">
                         <button
                             onClick={() =>
@@ -340,7 +350,7 @@ export default function Home() {
                                                         d.id,
                                                     )
                                                 }
-                                                className="text-red-200 hover:text-red-500"
+                                                className="text-red-200 hover:text-red-500 p-2"
                                             >
                                                 <i className="fas fa-trash-alt"></i>
                                             </button>
@@ -356,7 +366,7 @@ export default function Home() {
                 <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-end gap-6 z-50">
                     <button
                         onClick={() => setActiveModal("resumo")}
-                        className="bg-white w-20 h-20 rounded-[1.2rem] shadow-2xl border border-slate-50 flex flex-col items-center justify-center hover:scale-110 transition-all cursor-pointer"
+                        className="bg-white w-20 h-20 rounded-[1.2rem] shadow-2xl border border-slate-50 flex flex-col items-center justify-center hover:scale-110 transition-all"
                     >
                         <i className="fas fa-chart-pie text-slate-300 text-xl"></i>
                         <span className="text-[9px] font-black mt-1 text-slate-400 uppercase">
@@ -374,7 +384,6 @@ export default function Home() {
                         </span>
                     </button>
 
-                    {/* MENU CRIAR COM HOVER CORRIGIDO */}
                     <div className="relative group">
                         <button className="bg-white w-20 h-20 rounded-[1.2rem] shadow-2xl border border-slate-50 flex flex-col items-center justify-center hover:scale-110 transition-all">
                             <i className="fas fa-plus-square text-slate-300 text-xl"></i>
@@ -404,14 +413,14 @@ export default function Home() {
                 </div>
             </main>
 
-            {/* MODAL RESUMO COM HISTÓRICO MENSAL */}
+            {/* MODAL RESUMO (HISTÓRICO) */}
             {activeModal === "resumo" && (
                 <div
                     className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
                     onClick={() => setActiveModal(null)}
                 >
                     <div
-                        className="bg-white w-full max-w-[400px] rounded-[2rem] p-8 shadow-2xl max-h-[85vh] flex flex-col"
+                        className="bg-white w-full max-w-[400px] rounded-[2rem] p-8 shadow-2xl max-h-[80vh] flex flex-col"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex justify-between items-center mb-6">
@@ -425,77 +434,47 @@ export default function Home() {
                                 <i className="fas fa-times"></i>
                             </button>
                         </div>
-                        <div className="flex-1 overflow-y-auto custom-scroll space-y-4 pr-2">
-                            <div className="bg-blue-600 p-6 rounded-2xl shadow-xl shadow-blue-100 text-white mb-6">
-                                <p className="text-[9px] font-black uppercase opacity-70 mb-1">
-                                    {label3} (
-                                    {
-                                        [
-                                            "Jan",
-                                            "Fev",
-                                            "Mar",
-                                            "Abr",
-                                            "Mai",
-                                            "Jun",
-                                            "Jul",
-                                            "Ago",
-                                            "Set",
-                                            "Out",
-                                            "Nov",
-                                            "Dez",
-                                        ][mesSelecionado]
-                                    }
-                                    )
-                                </p>
-                                <h2 className="text-2xl font-black">
-                                    {somaTotal.toLocaleString("pt-br", {
-                                        style: "currency",
-                                        currency: "BRL",
-                                    })}
-                                </h2>
-                            </div>
-                            <div className="space-y-2">
-                                {[
-                                    "Jan",
-                                    "Fev",
-                                    "Mar",
-                                    "Abr",
-                                    "Mai",
-                                    "Jun",
-                                    "Jul",
-                                    "Ago",
-                                    "Set",
-                                    "Out",
-                                    "Nov",
-                                    "Dez",
-                                ].map((mes, idx) => (
-                                    <div
-                                        key={mes}
-                                        className={`flex justify-between p-3 rounded-xl border ${mesSelecionado === idx ? "bg-blue-50 border-blue-200" : "bg-slate-50 border-slate-100"}`}
-                                    >
-                                        <span className="text-[10px] font-black text-slate-500 uppercase">
-                                            {mes}
-                                        </span>
-                                        <span className="text-[10px] font-bold text-slate-700">
-                                            {mesSelecionado === idx
-                                                ? somaTotal.toLocaleString(
-                                                      "pt-br",
-                                                      {
-                                                          style: "currency",
-                                                          currency: "BRL",
-                                                      },
-                                                  )
-                                                : "---"}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
+                        <div className="flex-1 overflow-y-auto custom-scroll space-y-2 pr-2">
+                            {[
+                                "Jan",
+                                "Fev",
+                                "Mar",
+                                "Abr",
+                                "Mai",
+                                "Jun",
+                                "Jul",
+                                "Ago",
+                                "Set",
+                                "Out",
+                                "Nov",
+                                "Dez",
+                            ].map((mes, idx) => (
+                                <div
+                                    key={mes}
+                                    className={`flex justify-between p-4 rounded-xl border ${mesSelecionado === idx ? "bg-blue-50 border-blue-200" : "bg-slate-50 border-slate-100"}`}
+                                >
+                                    <span className="text-[10px] font-black text-slate-500 uppercase">
+                                        {mes}
+                                    </span>
+                                    <span className="text-[11px] font-bold text-slate-700">
+                                        {mesSelecionado === idx
+                                            ? somaTotal.toLocaleString(
+                                                  "pt-br",
+                                                  {
+                                                      style: "currency",
+                                                      currency: "BRL",
+                                                  },
+                                              )
+                                            : "---"}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* MODAL CATEGORIA COM LISTAGEM */}
+            {/* MODAL CATEGORIA (LISTAGEM + SALVAR) */}
             {activeModal === "categoria" && (
                 <div
                     className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
@@ -508,7 +487,10 @@ export default function Home() {
                         <h3 className="font-black text-slate-800 text-xl uppercase mb-6 tracking-tighter">
                             Gerir Categorias
                         </h3>
-                        <div className="flex gap-2 mb-6">
+                        <form
+                            onSubmit={handleSalvarCategoria}
+                            className="flex gap-2 mb-6"
+                        >
                             <input
                                 type="text"
                                 placeholder="Nome..."
@@ -519,12 +501,12 @@ export default function Home() {
                                 className="flex-1 bg-slate-50 border p-4 rounded-xl font-bold outline-none focus:border-emerald-400 text-xs"
                             />
                             <button
-                                onClick={handleSalvarCategoria}
+                                type="submit"
                                 className="bg-emerald-600 text-white px-6 rounded-xl font-black uppercase text-[10px]"
                             >
                                 Add
                             </button>
-                        </div>
+                        </form>
                         <div className="flex-1 overflow-y-auto custom-scroll space-y-2 pr-2">
                             {categorias.map((cat) => (
                                 <div
@@ -540,7 +522,7 @@ export default function Home() {
                                         }
                                         className="text-red-300 hover:text-red-500 transition-all"
                                     >
-                                        <i className="fas fa-trash-alt text-[10px]"></i>
+                                        <i className="fas fa-trash-alt"></i>
                                     </button>
                                 </div>
                             ))}
@@ -549,7 +531,38 @@ export default function Home() {
                 </div>
             )}
 
-            {/* MODAIS RESTANTES (LANÇAR E CARTÃO) - MANTIDOS CONFORME REGRAS */}
+            {/* MODAL CARTÃO (SALVAR) */}
+            {activeModal === "cartao" && (
+                <div
+                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
+                    onClick={() => setActiveModal(null)}
+                >
+                    <form
+                        onSubmit={handleSalvarCartao}
+                        className="bg-white w-full max-w-[400px] rounded-[2rem] p-8 shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="font-black text-slate-800 text-xl uppercase mb-6 tracking-tighter">
+                            Novo Banco/Cartão
+                        </h3>
+                        <input
+                            type="text"
+                            placeholder="Nome do Banco"
+                            value={nomeNovoCartao}
+                            onChange={(e) => setNomeNovoCartao(e.target.value)}
+                            className="w-full bg-slate-50 border p-4 rounded-xl font-bold mb-4 outline-none focus:border-blue-400"
+                        />
+                        <button
+                            type="submit"
+                            className="w-full bg-blue-600 text-white font-black py-4 rounded-xl text-[10px] uppercase shadow-lg shadow-blue-100"
+                        >
+                            Salvar Banco
+                        </button>
+                    </form>
+                </div>
+            )}
+
+            {/* MODAL LANÇAMENTO (REGRAS DINÂMICAS) */}
             {activeModal === "lancar" && (
                 <div
                     className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
@@ -591,9 +604,9 @@ export default function Home() {
                                     onChange={(e) =>
                                         setCartaoId(e.target.value)
                                     }
-                                    className="bg-slate-50 border p-3 rounded-xl font-bold text-[10px] uppercase"
+                                    className="bg-slate-50 border p-3 rounded-xl font-bold text-[10px] uppercase outline-none"
                                 >
-                                    <option value="">Cartão/Banco</option>
+                                    <option value="">Banco/Cartão</option>
                                     {cartoes.map((c) => (
                                         <option key={c.id} value={c.id}>
                                             {c.nome}
@@ -605,7 +618,7 @@ export default function Home() {
                                     onChange={(e) =>
                                         setCategoriaId(e.target.value)
                                     }
-                                    className="bg-slate-50 border p-3 rounded-xl font-bold text-[10px] uppercase"
+                                    className="bg-slate-50 border p-3 rounded-xl font-bold text-[10px] uppercase outline-none"
                                 >
                                     <option value="">Categoria</option>
                                     {categorias.map((cat) => (
@@ -642,50 +655,21 @@ export default function Home() {
                             {isParcelado && (
                                 <input
                                     type="number"
-                                    placeholder="Parcelas"
+                                    placeholder="Quantidade de Parcelas"
                                     value={qtdParcelas}
                                     onChange={(e) =>
                                         setQtdParcelas(e.target.value)
                                     }
-                                    className="w-full bg-blue-50 border border-blue-100 p-4 rounded-xl text-xs font-bold text-blue-700 shadow-inner"
+                                    className="w-full bg-blue-50 border border-blue-100 p-4 rounded-xl text-xs font-bold text-blue-700"
                                 />
                             )}
                             <button
                                 onClick={handleConfirmarLancamento}
                                 className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl mt-4 uppercase tracking-widest text-[10px] shadow-xl hover:bg-blue-700 transition-all"
                             >
-                                Confirmar
+                                Confirmar Lançamento
                             </button>
                         </div>
-                    </div>
-                </div>
-            )}
-
-            {activeModal === "cartao" && (
-                <div
-                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
-                    onClick={() => setActiveModal(null)}
-                >
-                    <div
-                        className="bg-white w-full max-w-[400px] rounded-[2rem] p-8 shadow-2xl"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <h3 className="font-black text-slate-800 text-xl uppercase mb-6 tracking-tighter">
-                            Novo Banco
-                        </h3>
-                        <input
-                            type="text"
-                            placeholder="Nome do Banco"
-                            value={nomeNovoCartao}
-                            onChange={(e) => setNomeNovoCartao(e.target.value)}
-                            className="w-full bg-slate-50 border p-4 rounded-xl font-bold mb-4 outline-none focus:border-blue-400"
-                        />
-                        <button
-                            onClick={handleSalvarCartao}
-                            className="w-full bg-blue-600 text-white font-black py-4 rounded-xl text-[10px] uppercase"
-                        >
-                            Salvar
-                        </button>
                     </div>
                 </div>
             )}
